@@ -1,0 +1,43 @@
+name: .NET Core CI
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    name: .Net Core ${{ matrix.framework }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+        framework: ['3.1']
+        include: 
+        - os: windows-latest
+          target: win-x64
+        - os: ubuntu-latest
+          target: linux-x64
+        - os: macos-latest
+          target: macos-x64
+    timeout-minutes: 30
+    
+    steps:
+    - uses: actions/checkout@v2.2.0
+       
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v1.5.0
+      with:
+        dotnet-version: ${{ matrix.framework }}
+        
+    - name: Install dependencies
+      run: dotnet restore -r ${{ matrix.target }}
+   
+    - name: Build ${{ matrix.target }}
+      run: dotnet publish -r ${{ matrix.target }} -c release -o "${{ github.workspace }}/builds/${{ matrix.framework }}/${{ matrix.target }}"
+      
+    - name: Test
+      run: dotnet test
+  
+    - name: Upload ${{ matrix.target }}
+      uses: actions/upload-artifact@v2
+      with:
+        name: VirusTotalChecker-${{ matrix.target }}
+        path: ${{ github.workspace }}/builds/${{ matrix.framework }}/${{ matrix.target }}
