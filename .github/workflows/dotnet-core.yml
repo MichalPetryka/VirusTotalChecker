@@ -31,13 +31,13 @@ jobs:
       run: dotnet restore -r ${{ matrix.target }}
    
     - name: Build ${{ matrix.target }}
-      run: dotnet publish -r ${{ matrix.target }} -c release -o "${{ github.workspace }}/builds/${{ matrix.framework }}/${{ matrix.target }}"
+      run: dotnet publish -r ${{ matrix.target }} -c release
       
     - name: Test
       run: dotnet test
   
-    - name: Upload ${{ matrix.target }}
+    - name: Upload Console ${{ matrix.target }}
       uses: actions/upload-artifact@v2
       with:
         name: VirusTotalChecker-${{ matrix.target }}
-        path: ${{ github.workspace }}/builds/${{ matrix.framework }}/${{ matrix.target }}
+        path: ${{ github.workspace }}/VirusTotalChecker.Console/bin/Release/netcoreapp${{ matrix.framework }}/${{ matrix.target }}/publish
