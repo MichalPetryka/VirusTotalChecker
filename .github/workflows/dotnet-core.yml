@@ -39,5 +39,5 @@ jobs:
     - name: Upload Console ${{ matrix.target }}
       uses: actions/upload-artifact@v2
       with:
-        name: VirusTotalChecker-${{ matrix.target }}
+        name: VirusTotalChecker.Console-${{ matrix.target }}
         path: ${{ github.workspace }}/VirusTotalChecker.Console/bin/Release/netcoreapp${{ matrix.framework }}/${{ matrix.target }}/publish
