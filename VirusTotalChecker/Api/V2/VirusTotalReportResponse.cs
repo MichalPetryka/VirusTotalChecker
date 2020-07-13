@@ -1,4 +1,4 @@
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 
 namespace VirusTotalChecker.Api.V2
 {

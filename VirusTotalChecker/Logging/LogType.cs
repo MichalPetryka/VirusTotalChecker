@@ -1,4 +1,4 @@
-namespace VirusTotalChecker.Logging
+﻿namespace VirusTotalChecker.Logging
 {
 	public enum LogType
 	{

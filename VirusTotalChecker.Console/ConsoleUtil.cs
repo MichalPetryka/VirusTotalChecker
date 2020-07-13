@@ -22,9 +22,7 @@ namespace VirusTotalChecker.Console
 				try
 				{
 					if (color != null && !NoColor)
-					{
 						SystemConsole.ForegroundColor = color.Value;
-					}
 				}
 				catch
 				{

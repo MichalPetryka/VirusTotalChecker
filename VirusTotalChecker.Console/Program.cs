@@ -30,24 +30,18 @@ namespace VirusTotalChecker.Console
 					using (FileStream fs = new FileStream(inotify, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
 					{
 						using (StreamReader sr = new StreamReader(fs))
-						{
 							value = sr.ReadToEnd();
-						}
 					}
 
 					if (int.TryParse(value, out int limit))
 					{
 						if (limit < 8192 + directories.Length)
-						{
 							// ReSharper disable once HeapView.BoxingAllocation
 							ConsoleUtil.WriteLine($"Low inotify limit: {limit}, consider increasing it's value",
 								ConsoleColor.Yellow);
-						}
 					}
 					else
-					{
 						ConsoleUtil.WriteLine($"Can't parse {value} as a valid inotify limit!", ConsoleColor.Red);
-					}
 				}
 			}
 			catch (Exception ex)
@@ -60,23 +54,15 @@ namespace VirusTotalChecker.Console
 				FileSystemWatcher watcher = new FileSystemWatcher(directory.Path);
 				watcher.Filters.Clear();
 				foreach (string filter in directory.Filters)
-				{
 					watcher.Filters.Add(filter);
-				}
 
 				watcher.IncludeSubdirectories = directory.IncludeSubdirectories;
 				NotifyFilters filters = 0;
 				foreach (string directoryEvent in directory.Events)
-				{
 					if (Enum.TryParse(directoryEvent, true, out NotifyFilters filter))
-					{
 						filters |= filter;
-					}
 					else
-					{
 						ConsoleUtil.WriteLine($"Invalid event {directoryEvent}", ConsoleColor.Yellow);
-					}
-				}
 
 				watcher.NotifyFilter = filters;
 
@@ -171,15 +157,11 @@ namespace VirusTotalChecker.Console
 
 								string filter = "*";
 								if (command.Length >= 3)
-								{
 									filter = command[2];
-								}
 
 								bool recursive = true;
 								if (command.Length >= 4)
-								{
 									recursive = bool.Parse(command[3]);
-								}
 
 								ProcessDirectory(path, filter, recursive);
 								break;
@@ -232,9 +214,7 @@ namespace VirusTotalChecker.Console
 		private static async Task CheckFile(string path, string hash = null)
 		{
 			if (_exitting)
-			{
 				return;
-			}
 
 			try
 			{
@@ -268,12 +248,10 @@ namespace VirusTotalChecker.Console
 			if (report.Available)
 			{
 				if (report.Positive == 0)
-				{
 					ConsoleUtil.WriteLine(
 						// ReSharper disable once HeapView.BoxingAllocation
 						$"File {name} clean, last checked on {report.Date} by {report.Total} AVs\n{report.Link}",
 						ConsoleColor.Green);
-				}
 				else if (report.Positive / (float)report.Total < 0.1f)
 				{
 					// ReSharper disable HeapView.BoxingAllocation
@@ -294,10 +272,8 @@ namespace VirusTotalChecker.Console
 				}
 			}
 			else
-			{
 				ConsoleUtil.WriteLine($"File {name} not present in the database, upload it manually",
 					ConsoleColor.Blue);
-			}
 		}
 
 		internal static string GetErrorMessage(Exception ex) => _showStacktraces ? ex.ToString() : ex.Message;
@@ -306,9 +282,7 @@ namespace VirusTotalChecker.Console
 		{
 			_exitting = true;
 			foreach (FileSystemWatcher watcher in Watchers)
-			{
 				watcher.Dispose();
-			}
 
 			_client.Dispose();
 			Environment.Exit(0);

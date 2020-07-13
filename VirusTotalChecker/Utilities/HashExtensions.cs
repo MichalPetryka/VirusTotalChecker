@@ -8,7 +8,8 @@ namespace VirusTotalChecker.Utilities
 	{
 		public static Task<byte[]> ComputeHashAsync(this HashAlgorithm hash, Stream stream)
 		{
-			return Task.Run(() => hash.ComputeHash(stream));
+			byte[] Function() => hash.ComputeHash(stream);
+			return Task.Run(Function);
 		}
 	}
 }

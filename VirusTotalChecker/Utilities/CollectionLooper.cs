@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace VirusTotalChecker.Utilities
 {
@@ -16,9 +16,7 @@ namespace VirusTotalChecker.Utilities
 		public T Get()
 		{
 			if (_index >= _collection.Count)
-			{
 				_index = 0;
-			}
 
 			return _collection[_index++];
 		}

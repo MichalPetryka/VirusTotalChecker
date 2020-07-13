@@ -1,4 +1,4 @@
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -17,9 +17,7 @@ namespace VirusTotalChecker.Api.V2
 			using (HttpResponseMessage result = await Client.GetAsync($"https://www.virustotal.com/vtapi/v2/file/report?apikey={ApiKey}&resource={resource}"))
 			{
 				if (result.StatusCode == HttpStatusCode.NoContent)
-				{
 					throw new RateLimitException(resource);
-				}
 
 				response = JsonConvert.DeserializeObject<VirusTotalReportResponse>(await result.Content.ReadAsStringAsync());
 			}

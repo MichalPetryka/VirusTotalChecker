@@ -1,4 +1,4 @@
-namespace VirusTotalChecker.Api.V2
+﻿namespace VirusTotalChecker.Api.V2
 {
 	public enum VirusTotalResult
 	{

@@ -1,4 +1,4 @@
-namespace VirusTotalChecker.Configuration
+﻿namespace VirusTotalChecker.Configuration
 {
 	public class VirusTotalConfig
 	{

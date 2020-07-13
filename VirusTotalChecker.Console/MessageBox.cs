@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -65,9 +65,7 @@ namespace VirusTotalChecker.Console
 		public static void Show(string title, string message, Type type = Type.Info)
 		{
 			if (!Enabled)
-			{
 				return;
-			}
 
 			void ShowDialog()
 			{

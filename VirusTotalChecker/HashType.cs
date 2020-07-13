@@ -1,4 +1,4 @@
-namespace VirusTotalChecker
+﻿namespace VirusTotalChecker
 {
 	public enum HashType
 	{

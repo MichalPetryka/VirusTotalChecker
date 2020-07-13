@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Net.Http;
 using System.Security.Cryptography;
@@ -40,18 +40,14 @@ namespace VirusTotalChecker
 		public async Task<VirusTotalReport> CheckHash(string hash)
 		{
 			if (!_cacheLast)
-			{
 				return await _api.Report(hash);
-			}
 
 			lock (_lastLock)
-			{
 				if (string.Equals(_lastHash, hash, StringComparison.OrdinalIgnoreCase))
 				{
 					_logHandler.Log($"Returning cached data for {hash}");
 					return _lastReport;
 				}
-			}
 
 			VirusTotalReport report = await _api.Report(hash);
 			lock (_lastLock)
@@ -68,15 +64,9 @@ namespace VirusTotalChecker
 			_fileLinkClient ??= new HttpClient();
 			byte[] hash;
 			using (HashAlgorithm hashAlgorithm = GetHashAlgorithm())
-			{
 				using (HttpResponseMessage response = await _fileLinkClient.GetAsync(link))
-				{
 					await using (Stream stream = await response.Content.ReadAsStreamAsync())
-					{
 						hash = await hashAlgorithm.ComputeHashAsync(stream);
-					}
-				}
-			}
 
 			return await CheckHash(hash.ToHexString());
 		}
@@ -85,13 +75,9 @@ namespace VirusTotalChecker
 		{
 			byte[] hash;
 			using (HashAlgorithm hashAlgorithm = GetHashAlgorithm())
-			{
 				await using (FileStream fs = await WaitForFile(path, FileMode.Open, FileAccess.Read,
 					FileShare.ReadWrite))
-				{
 					hash = await hashAlgorithm.ComputeHashAsync(fs);
-				}
-			}
 
 			return await CheckHash(hash.ToHexString());
 		}
@@ -112,9 +98,7 @@ namespace VirusTotalChecker
 				{
 					exception = ex;
 					if (fs != null)
-					{
 						await fs.DisposeAsync();
-					}
 
 					const int retryDelay = 200;
 					// ReSharper disable once InconsistentlySynchronizedField

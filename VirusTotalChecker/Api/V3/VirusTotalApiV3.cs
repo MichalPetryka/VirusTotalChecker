@@ -1,4 +1,4 @@
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using System;
 using System.Net;
 using System.Net.Http;
@@ -19,22 +19,13 @@ namespace VirusTotalChecker.Api.V3
 			using (HttpResponseMessage result = await Client.GetAsync($"https://www.virustotal.com/api/v3/files/{resource}"))
 			{
 				if (result.StatusCode == HttpStatusCode.TooManyRequests)
-				{
 					throw new RateLimitException(resource);
-				}
 
 				data = JsonConvert.DeserializeObject<VirusTotalData>(await result.Content.ReadAsStringAsync());
 			}
 
 			if (data.Error != null)
-			{
-				if (data.Error.Code == "NotFoundError")
-				{
-					return new VirusTotalReport { Available = false };
-				}
-
-				throw new VirusTotalException(data.Error.Message);
-			}
+				return data.Error.Code == "NotFoundError" ? new VirusTotalReport { Available = false } : throw new VirusTotalException(data.Error.Message);
 
 			VirusTotalFileData response = data.Data;
 			return new VirusTotalReport
