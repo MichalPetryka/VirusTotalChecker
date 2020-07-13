@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using VirusTotalChecker.Api;
 using VirusTotalChecker.Configuration;
@@ -184,6 +186,53 @@ namespace VirusTotalChecker.Console
 								ProcessFile(hash, hash);
 								break;
 							}
+						case "scanprocesses":
+							{
+								string filter = ".*";
+								if (command.Length >= 2)
+									filter = command[1];
+
+								Regex regex = new Regex(filter);
+
+								bool scanSubmodules = false;
+								if (command.Length >= 3)
+									scanSubmodules = bool.Parse(command[2]);
+
+								foreach (Process process in Process.GetProcesses())
+									try
+									{
+										if (regex.IsMatch(process.ProcessName))
+										{
+											ProcessFile(process.MainModule.FileName);
+											if (scanSubmodules)
+												foreach (ProcessModule module in process.Modules)
+													ProcessFile(module.FileName);
+										}
+									}
+									catch (Exception ex)
+									{
+										ConsoleUtil.WriteLine($"Failed to scan {process.ProcessName}. Error: {GetErrorMessage(ex)}", ConsoleColor.Red);
+									}
+								break;
+							}
+						case "scanfilelink":
+							{
+								if (command.Length < 2)
+								{
+									ConsoleUtil.WriteLine("You need to specify the desired link!", ConsoleColor.Yellow);
+									break;
+								}
+
+								string link = command[1];
+								if (string.IsNullOrWhiteSpace(link))
+								{
+									ConsoleUtil.WriteLine("Specified link is empty!", ConsoleColor.Yellow);
+									break;
+								}
+
+								ProcessFileLink(link);
+								break;
+							}
 						default:
 							{
 								ConsoleUtil.WriteLine("Unknown command!", ConsoleColor.Yellow);
@@ -201,6 +250,11 @@ namespace VirusTotalChecker.Console
 		private static async void ProcessFile(string path, string hash = null)
 		{
 			await CheckFile(path, hash);
+		}
+
+		private static async void ProcessFileLink(string path)
+		{
+			await CheckFileLink(path);
 		}
 
 		private static async void ProcessDirectory(string path, string filter, bool recursive)
@@ -238,6 +292,33 @@ namespace VirusTotalChecker.Console
 			}
 		}
 
+
+		private static async Task CheckFileLink(string link, string hash = null)
+		{
+			if (_exitting)
+				return;
+
+			try
+			{
+				PrintResult(link, hash == null ? await _client.CheckFileLink(link) : await _client.CheckHash(hash));
+			}
+			catch (RateLimitException rateLimitException)
+			{
+				// ReSharper disable once HeapView.BoxingAllocation
+				ConsoleUtil.WriteLine($"Request for {link} exceeded the ratelimit, retrying in {ratelimitRetryDelay}ms",
+					ConsoleColor.Yellow);
+				await Task.Delay(ratelimitRetryDelay);
+				await CheckFileLink(link, rateLimitException.Resource);
+			}
+			catch (Exception ex)
+			{
+				ConsoleUtil.WriteLine(
+					ex.InnerException == null
+						? GetErrorMessage(ex)
+						: $"{GetErrorMessage(ex)}. Inner error: {GetErrorMessage(ex.InnerException)}",
+					ConsoleColor.Red);
+			}
+		}
 		private static void OnFileChange(object sender, FileSystemEventArgs e)
 		{
 			ProcessFile(Path.GetFullPath(e.FullPath));
@@ -285,6 +366,7 @@ namespace VirusTotalChecker.Console
 				watcher.Dispose();
 
 			_client.Dispose();
+			ConsoleUtil.ResetColor();
 			Environment.Exit(0);
 		}
 	}

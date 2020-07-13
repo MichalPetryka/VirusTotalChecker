@@ -34,6 +34,12 @@ namespace VirusTotalChecker.Console
 			}
 		}
 
+		internal static void ResetColor()
+		{
+			lock (WriteLock)
+				SystemConsole.ResetColor();
+		}
+
 		private class ConsoleLogHandler : ILogHandler
 		{
 			public void Log(string message, LogType logType = LogType.Info)
