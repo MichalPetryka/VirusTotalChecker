@@ -21,7 +21,7 @@ namespace VirusTotalChecker.Console.ExitHandlers
 
 		public void Setup()
 		{
-			new Thread(ProcessExit) {IsBackground = true}.Start();
+			new Thread(ProcessExit) { IsBackground = true }.Start();
 		}
 
 		private static void ProcessExit()
