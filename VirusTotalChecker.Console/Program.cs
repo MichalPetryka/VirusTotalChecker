@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.InteropServices;
 using VirusTotalChecker.Configuration;
+using VirusTotalChecker.Console.ExitHandlers;
 using VirusTotalChecker.Utilities;
 
 namespace VirusTotalChecker.Console
@@ -9,6 +11,7 @@ namespace VirusTotalChecker.Console
 	internal static class Program
 	{
 		private static readonly List<FileSystemWatcher> Watchers = new List<FileSystemWatcher>();
+		public static readonly List<IExitHandler> ExitHandlers = new List<IExitHandler>();
 		private static DataProcessor _processor;
 		public static volatile bool Exitting;
 
@@ -46,7 +49,7 @@ namespace VirusTotalChecker.Console
 			}
 
 			ConsoleUtil.WriteLine("Directory monitoring setup complete!", ConsoleColor.Green);
-			AppDomain.CurrentDomain.ProcessExit += (sender, arg) => Exit();
+			SetupExitHandlers();
 
 			CommandProcessor commandProcessor = new CommandProcessor(_processor);
 			while (true)
@@ -68,6 +71,24 @@ namespace VirusTotalChecker.Console
 			}
 			// exit command closes the program
 			// ReSharper disable once FunctionNeverReturns
+		}
+
+		private static void SetupExitHandlers()
+		{
+			try
+			{
+				ExitHandlers.Add(ProcessExitHandler.Singleton);
+				ExitHandlers.Add(AppDomainExitHandler.Singleton);
+				ExitHandlers.Add(CancelKeyPressExitHandler.Singleton);
+				ExitHandlers.Add(RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? WindowsExitHandler.Singleton : UnixExitHandler.Singleton);
+
+				foreach (IExitHandler exitHandler in ExitHandlers)
+					exitHandler.Setup();
+			}
+			catch (Exception ex)
+			{
+				ConsoleUtil.WriteLine($"Failed to setup exit handlers! Error: {ExceptionFilter.GetErrorMessage(ex)}", ConsoleColor.Red);
+			}
 		}
 
 		private static void CheckInotify(int watcherCount)

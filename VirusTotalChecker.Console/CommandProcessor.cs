@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Text.RegularExpressions;
+using VirusTotalChecker.Console.ExitHandlers;
 using VirusTotalChecker.Utilities;
 
 namespace VirusTotalChecker.Console
@@ -48,6 +49,31 @@ namespace VirusTotalChecker.Console
 							ExceptionFilter.ShowStacktraces = true;
 							ConsoleUtil.WriteLine("Enabled stacktraces", ConsoleColor.Blue);
 						}
+						break;
+					}
+				case "logexit":
+					{
+						if (command.Length < 2)
+						{
+							ConsoleUtil.WriteLine("You need to specify exit logging state!", ConsoleColor.Yellow);
+							break;
+						}
+
+						string state = command[1];
+						if (string.IsNullOrWhiteSpace(state))
+						{
+							ConsoleUtil.WriteLine("Specified state is empty!", ConsoleColor.Yellow);
+							break;
+						}
+
+						if (!bool.TryParse(state, out bool enabled))
+						{
+							ConsoleUtil.WriteLine($"{state} isn't a valid boolean!", ConsoleColor.Yellow);
+							break;
+						}
+
+						foreach (IExitHandler handler in Program.ExitHandlers)
+							handler.LogExit = enabled;
 						break;
 					}
 				case "eicar":
