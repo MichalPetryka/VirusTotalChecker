@@ -15,53 +15,67 @@ namespace VirusTotalChecker.Console
 			return SystemConsole.ReadLine();
 		}
 
-		public static void WriteLine(string message, ConsoleColor? color = null)
+		public static string ReadLineLock(string message = "Input your command and press enter to unlock output:")
 		{
 			lock (WriteLock)
 			{
-				try
-				{
-					if (color != null && !NoColor)
-						SystemConsole.ForegroundColor = color.Value;
-				}
-				catch
-				{
-					SystemConsole.ResetColor();
-				}
-
-				SystemConsole.WriteLine(message);
-				SystemConsole.ResetColor();
+				WriteLineNoLock(message, ConsoleColor.Blue);
+				return ReadLine();
 			}
 		}
 
-		internal static void ResetColor()
+		public static void WriteLine(string message, ConsoleColor? color = null)
 		{
 			lock (WriteLock)
+				WriteLineNoLock(message, color);
+		}
+
+		public static void WriteLine(params (string message, ConsoleColor? color)[] lines)
+		{
+			lock (WriteLock)
+				foreach ((string message, ConsoleColor? color) in lines)
+					WriteLineNoLock(message, color);
+		}
+
+		private static void WriteLineNoLock(string message, ConsoleColor? color)
+		{
+			try
+			{
+				if (color != null && !NoColor)
+					SystemConsole.ForegroundColor = color.Value;
+			}
+			catch
+			{
 				SystemConsole.ResetColor();
+			}
+
+			SystemConsole.WriteLine(message);
+			SystemConsole.ResetColor();
+		}
+
+		internal static void Exit()
+		{
+			lock (WriteLock)
+			{
+				SystemConsole.ResetColor();
+				WriteLineNoLock("Exitting...", ConsoleColor.Blue);
+			}
 		}
 
 		private class ConsoleLogHandler : ILogHandler
 		{
 			public void Log(string message, LogType logType = LogType.Info)
 			{
-				switch (logType)
+				ConsoleColor? color = logType switch
 				{
-					case LogType.Debug:
-						WriteLine(message);
-						break;
-					case LogType.Info:
-						WriteLine(message, ConsoleColor.Blue);
-						break;
-					case LogType.Warning:
-						WriteLine(message, ConsoleColor.Yellow);
-						break;
-					case LogType.Error:
-						WriteLine(message, ConsoleColor.Red);
-						break;
-					default:
-						// ReSharper disable once HeapView.BoxingAllocation
-						throw new ArgumentOutOfRangeException(nameof(logType), logType, null);
-				}
+					LogType.Debug => null,
+					LogType.Info => ConsoleColor.Blue,
+					LogType.Warning => ConsoleColor.Yellow,
+					LogType.Error => ConsoleColor.Red,
+					// ReSharper disable once HeapView.BoxingAllocation
+					_ => throw new ArgumentOutOfRangeException(nameof(logType), logType, null)
+				};
+				WriteLine(message, color);
 			}
 		}
 	}

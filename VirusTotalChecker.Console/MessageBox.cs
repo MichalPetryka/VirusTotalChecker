@@ -2,6 +2,7 @@
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Threading;
+using VirusTotalChecker.Utilities;
 
 namespace VirusTotalChecker.Console
 {
@@ -57,7 +58,7 @@ namespace VirusTotalChecker.Console
 			}
 			catch (Exception ex)
 			{
-				ConsoleUtil.WriteLine($"Error when loading SDL2: {Program.GetErrorMessage(ex)}", ConsoleColor.Red);
+				ConsoleUtil.WriteLine($"Error when loading SDL2: {ExceptionFilter.GetErrorMessage(ex)}", ConsoleColor.Red);
 				Enabled = false;
 			}
 		}
@@ -99,7 +100,7 @@ namespace VirusTotalChecker.Console
 				}
 				catch (Exception ex)
 				{
-					ConsoleUtil.WriteLine($"MessageBox creation failed: {Program.GetErrorMessage(ex)}",
+					ConsoleUtil.WriteLine($"MessageBox creation failed: {ExceptionFilter.GetErrorMessage(ex)}",
 						ConsoleColor.Red);
 				}
 			}

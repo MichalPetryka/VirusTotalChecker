@@ -103,7 +103,7 @@ namespace VirusTotalChecker
 					const int retryDelay = 200;
 					// ReSharper disable once InconsistentlySynchronizedField
 					// ReSharper disable once HeapView.BoxingAllocation
-					_logHandler.Log($"Reading {fullPath} failed, retrying in {retryDelay}ms. Error: {ex.Message}",
+					_logHandler.Log($"Reading {fullPath} failed, retrying in {retryDelay}ms. Error: {ExceptionFilter.GetErrorMessage(ex)}",
 						LogType.Warning);
 					await Task.Delay(retryDelay);
 				}
