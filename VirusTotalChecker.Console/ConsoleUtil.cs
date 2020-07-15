@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using VirusTotalChecker.Logging;
 using SystemConsole = System.Console;
 
@@ -9,6 +10,7 @@ namespace VirusTotalChecker.Console
 		private static readonly object WriteLock = new object();
 		private static readonly bool NoColor = Environment.GetEnvironmentVariable("NO_COLOR") != null;
 		public static readonly ILogHandler LogHandler = new ConsoleLogHandler();
+		public static StreamWriter LogStream;
 
 		public static string ReadLine()
 		{
@@ -50,6 +52,8 @@ namespace VirusTotalChecker.Console
 			}
 
 			SystemConsole.WriteLine(message);
+			LogStream?.WriteLine(message);
+
 			SystemConsole.ResetColor();
 		}
 
@@ -59,6 +63,9 @@ namespace VirusTotalChecker.Console
 			{
 				SystemConsole.ResetColor();
 				WriteLineNoLock("Exitting...", ConsoleColor.Blue);
+				LogStream?.Dispose();
+				LogStream = null;
+				SystemConsole.ResetColor();
 			}
 		}
 

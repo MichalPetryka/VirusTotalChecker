@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Runtime.InteropServices;
 using VirusTotalChecker.Configuration;
 using VirusTotalChecker.Console.ExitHandlers;
@@ -14,9 +15,38 @@ namespace VirusTotalChecker.Console
 		public static readonly List<IExitHandler> ExitHandlers = new List<IExitHandler>();
 		private static DataProcessor _processor;
 		public static volatile bool Exitting;
+		private static Stream _logStream;
 
 		private static void Main(string[] args)
 		{
+			bool logFile = true;
+			if (args.Length > 2)
+				logFile = bool.Parse(args[2]);
+			LogCompressionType compressionType = LogCompressionType.Gzip;
+			if (args.Length > 3)
+				compressionType = Enum.Parse<LogCompressionType>(args[2], true);
+			if (logFile)
+				try
+				{
+					if (!Directory.Exists("logs"))
+						Directory.CreateDirectory("logs");
+					static FileStream GetLogFileStream(string extension)
+						// ReSharper disable once HeapView.BoxingAllocation
+						=> new FileStream($"logs/{DateTime.Now:HH-mm-ss_dd-MM-yyyy}.{extension}", FileMode.CreateNew, FileAccess.Write, FileShare.ReadWrite);
+					_logStream = compressionType switch
+					{
+						LogCompressionType.None => GetLogFileStream("txt"),
+						LogCompressionType.Gzip => new GZipStream(GetLogFileStream("txt.gz"), CompressionLevel.Optimal),
+						LogCompressionType.Brotli => new BrotliStream(GetLogFileStream("txt.br"), CompressionLevel.Optimal),
+						_ => throw new ArgumentOutOfRangeException()
+					};
+					ConsoleUtil.LogStream = new StreamWriter(_logStream);
+				}
+				catch (Exception ex)
+				{
+					ConsoleUtil.WriteLine($"Failed to create a log file! Error: {ExceptionFilter.GetErrorMessage(ex)}");
+				}
+
 			string apikey = args.Length > 0 ? args[0] : ConsoleUtil.ReadLineLock("Input your api key:");
 			int apiVersion = 3;
 			if (args.Length > 1)
@@ -138,6 +168,7 @@ namespace VirusTotalChecker.Console
 
 			_processor.Dispose();
 			ConsoleUtil.Exit();
+			_logStream.Dispose();
 			Environment.Exit(exitCode);
 		}
 	}
