@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
+using Newtonsoft.Json;
 using VirusTotalChecker.Configuration;
 using VirusTotalChecker.Console.ExitHandlers;
 using VirusTotalChecker.Utilities;
@@ -52,10 +53,19 @@ namespace VirusTotalChecker.Console
 			if (args.Length > 1)
 				apiVersion = int.Parse(args[1]);
 			_processor = new DataProcessor(new VirusTotalClient(apikey, apiVersion, HashType.Sha256, true, ConsoleUtil.LogHandler), 60000);
-			MonitoredDirectory[] directories = new MonitoredDirectory[0];
-			CheckInotify(directories.Length);
+			const string configPath = "config.json";
+			if (!File.Exists(configPath))
+				using (FileStream fs = new FileStream(configPath, FileMode.CreateNew, FileAccess.Write, FileShare.Read))
+					using (StreamWriter sw = new StreamWriter(fs))
+						sw.Write(JsonConvert.SerializeObject(new VirusTotalConfig { MonitoredDirectories = new List<MonitoredDirectory>() }, Formatting.Indented));
 
-			foreach (MonitoredDirectory directory in directories)
+			VirusTotalConfig config;
+			using (FileStream fs = new FileStream(configPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+				using (StreamReader sr = new StreamReader(fs))
+					config = JsonConvert.DeserializeObject<VirusTotalConfig>(sr.ReadToEnd());
+			CheckInotify(config.MonitoredDirectories.Count);
+
+			foreach (MonitoredDirectory directory in config.MonitoredDirectories)
 			{
 				FileSystemWatcher watcher = new FileSystemWatcher(directory.Path);
 				watcher.Filters.Clear();
@@ -74,6 +84,7 @@ namespace VirusTotalChecker.Console
 
 				watcher.Changed += OnFileChange;
 				watcher.Created += OnFileChange;
+				watcher.EnableRaisingEvents = true;
 				Watchers.Add(watcher);
 				ConsoleUtil.WriteLine($"Setting up a watcher for {directory.Path}", ConsoleColor.Blue);
 			}
@@ -154,7 +165,8 @@ namespace VirusTotalChecker.Console
 
 		private static void OnFileChange(object sender, FileSystemEventArgs e)
 		{
-			_processor.ProcessFile(Path.GetFullPath(e.FullPath));
+			if ((File.GetAttributes(e.FullPath) & FileAttributes.Hidden) != FileAttributes.Hidden)
+				_processor.ProcessFile(Path.GetFullPath(e.FullPath));
 		}
 
 		public static void Exit(int exitCode = 0)
