@@ -10,7 +10,7 @@ namespace VirusTotalChecker.Tests
 		[InlineData("qwert test ąć@$%", "qwert test ąć@$%")]
 		public void EncryptionTest(string text, string key)
 		{
-			Assert.Equal(text, PasswordHelpers.DecryptString(PasswordHelpers.EncryptString(text, key), key));
+			Assert.Equal(text, PasswordHelpers.Decrypt(PasswordHelpers.Encrypt(text, key), key));
 		}
 
 		[Theory]

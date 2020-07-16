@@ -176,8 +176,7 @@ namespace VirusTotalChecker.Console
 							{
 								if (regex.IsMatch(process.ProcessName))
 								{
-									// ReSharper disable once PossibleNullReferenceException
-									_processor.ProcessFile(process.MainModule.FileName);
+									_processor.ProcessFile(process.MainModule!.FileName);
 									if (scanSubmodules)
 										foreach (ProcessModule module in process.Modules)
 											_processor.ProcessFile(module.FileName);
@@ -215,8 +214,7 @@ namespace VirusTotalChecker.Console
 							scanSubmodules = bool.Parse(command[2]);
 
 						Process process = Process.GetProcessById(pid);
-						// ReSharper disable once PossibleNullReferenceException
-						_processor.ProcessFile(process.MainModule.FileName);
+						_processor.ProcessFile(process.MainModule!.FileName);
 						if (scanSubmodules)
 							foreach (ProcessModule module in process.Modules)
 								_processor.ProcessFile(module.FileName);

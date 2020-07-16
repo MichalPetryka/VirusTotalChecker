@@ -101,16 +101,15 @@ namespace VirusTotalChecker
 						await fs.DisposeAsync();
 
 					const int retryDelay = 200;
-					// ReSharper disable once InconsistentlySynchronizedField
 					// ReSharper disable once HeapView.BoxingAllocation
+					// ReSharper disable once InconsistentlySynchronizedField
 					_logHandler.Log($"Reading {fullPath} failed, retrying in {retryDelay}ms. Error: {ExceptionFilter.GetErrorMessage(ex)}",
 						LogType.Warning);
 					await Task.Delay(retryDelay);
 				}
 			}
 
-			// ReSharper disable once PossibleNullReferenceException
-			throw exception;
+			throw exception!;
 		}
 
 		private HashAlgorithm GetHashAlgorithm()
