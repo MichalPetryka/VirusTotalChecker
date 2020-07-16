@@ -14,7 +14,7 @@ namespace VirusTotalChecker.Utilities
 		{
 			using (Aes aes = Aes.Create())
 			{
-				aes.Key = Encoding.GetBytes(key);
+				aes.Key = GetSha256Bytes(key);
 				byte[] array = ArrayPool<byte>.Shared.Rent(Encoding.GetMaxByteCount(plainText.Length));
 				int length = Encoding.GetBytes(plainText, array);
 				byte[] encrypted;
@@ -30,10 +30,16 @@ namespace VirusTotalChecker.Utilities
 			byte[] buffer = Convert.FromBase64String(cipherText);
 			using (Aes aes = Aes.Create())
 			{
-				aes.Key = Encoding.GetBytes(key);
+				aes.Key = GetSha256Bytes(key);
 				using (ICryptoTransform transform = aes.CreateDecryptor())
 					return Encoding.GetString(transform.TransformFinalBlock(buffer, 0, buffer.Length));
 			}
+		}
+
+		internal static byte[] GetSha256Bytes(string text)
+		{
+			using (SHA256 sha = SHA256.Create())
+				return sha.ComputeHash(Encoding.GetBytes(text));
 		}
 
 		public static string GetSha512(string text)
