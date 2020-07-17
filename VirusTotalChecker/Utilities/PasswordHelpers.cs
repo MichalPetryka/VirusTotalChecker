@@ -15,11 +15,14 @@ namespace VirusTotalChecker.Utilities
 		private const int NonceLength = 12;
 		private const int SaltLength = 32;
 
-		public static string Encrypt(string plainText, string password)
+		public static string Encrypt(string plainText, string password, out string keyHash)
 		{
 			byte[] salt = new byte[SaltLength];
 			Rng.GetBytes(salt);
 			byte[] key = DeriveEncryptionKey(password, salt, InterationsNumber, SaltLength);
+
+			using (SHA512 sha = SHA512.Create())
+				keyHash = sha.ComputeHash(key).ToHexString();
 
 			using (AesGcm aes = new AesGcm(key))
 			{
@@ -49,7 +52,7 @@ namespace VirusTotalChecker.Utilities
 			}
 		}
 
-		public static string Decrypt(string ciphertext, string password)
+		public static bool Decrypt(string ciphertext, string password, string keyHash, out string text)
 		{
 			Span<byte> buffer = ArrayPool<byte>.Shared.RentSegment(ciphertext.Length, out byte[] baseArray);
 			buffer = Convert.TryFromBase64String(ciphertext, buffer, out int written) ? buffer.Slice(0, written) : throw new Exception();
@@ -61,14 +64,22 @@ namespace VirusTotalChecker.Utilities
 			byte[] salt = buffer.Slice(NonceLength + TagLength, SaltLength).ToArray();
 			byte[] key = DeriveEncryptionKey(password, salt, InterationsNumber, SaltLength);
 
+			using (SHA512 sha = SHA512.Create())
+				if (sha.ComputeHash(key).ToHexString() != keyHash)
+				{
+					ArrayPool<byte>.Shared.Return(baseArray);
+					text = default;
+					return false;
+				}
+
 			Span<byte> plainData = ArrayPool<byte>.Shared.RentSegment(data.Length, out byte[] plainArray);
 			using (AesGcm aes = new AesGcm(key))
 				aes.Decrypt(nonce, data, tag, plainData);
 
 			ArrayPool<byte>.Shared.Return(baseArray);
-			string plainText = Encoding.GetString(plainData);
+			text = Encoding.GetString(plainData);
 			ArrayPool<byte>.Shared.Return(plainArray);
-			return plainText;
+			return true;
 		}
 
 		private static byte[] DeriveEncryptionKey(string password, byte[] salt, int iterations, int outputBytes)
@@ -77,18 +88,7 @@ namespace VirusTotalChecker.Utilities
 				return pbkdf2.GetBytes(outputBytes);
 		}
 
-		public static string GetSha512(string text)
-		{
-			using (SHA512 sha = SHA512.Create())
-			{
-				ArraySegment<byte> buffer = Encoding.GetPooledBytes(text, out byte[] array);
-				string result = sha.ComputeHash(buffer.Array!, buffer.Offset, buffer.Count).ToHexString();
-				ArrayPool<byte>.Shared.Return(array);
-				return result;
-			}
-		}
-
-		private static ArraySegment<byte> GetPooledBytes(this Encoding encoding, string s, out byte[] array)
+		internal static ArraySegment<byte> GetPooledBytes(this Encoding encoding, string s, out byte[] array)
 		{
 			array = ArrayPool<byte>.Shared.Rent(encoding.GetMaxByteCount(s.Length));
 			return new ArraySegment<byte>(array, 0, encoding.GetBytes(s, array));

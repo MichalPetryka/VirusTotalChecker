@@ -1,4 +1,6 @@
-﻿using VirusTotalChecker.Utilities;
+﻿using System.Buffers;
+using System.Text;
+using VirusTotalChecker.Utilities;
 using Xunit;
 
 namespace VirusTotalChecker.Tests
@@ -9,17 +11,29 @@ namespace VirusTotalChecker.Tests
 		[InlineData("", "qwert test ąć@$%")]
 		[InlineData("qwert test ąć@$%", "qwert test ąć@$%")]
 		[InlineData("qwert test ąć@$%", "")]
-		public void EncryptionTest(string text, string key)
+		public void EncryptionTest(string text, string password)
 		{
-			Assert.Equal(text, PasswordHelpers.Decrypt(PasswordHelpers.Encrypt(text, key), key));
+			Assert.True(PasswordHelpers.Decrypt(PasswordHelpers.Encrypt(text, password, out string keyHash), password, keyHash, out string result));
+			Assert.Equal(text, result);
 		}
 
 		[Theory]
-		[InlineData("", "CF83E1357EEFB8BDF1542850D66D8007D620E4050B5715DC83F4A921D36CE9CE47D0D13C5D85F2B0FF8318D2877EEC2F63B931BD47417A81A538327AF927DA3E")]
-		[InlineData("qwert test ąć@$%", "D03BAB1FBAC0CCEDEA1CE5DA13BF9428D02D1F24621FD5F32C1174C8E21DD6E7E688D2589E3AB426D7C65F466C0633D6535A2B75F9F019BC066ADB00F9143CFA")]
-		public void Sha512Test(string text, string hash)
+		[InlineData("", "qwert test ąć@$%", "fgdgfdfg")]
+		[InlineData("qwert test ąć@$%", "qwert test ąć@$%", "")]
+		[InlineData("qwert test ąć@$%", "", "gfdsdfh")]
+		public void InvalidPasswordTest(string text, string encryptionPassword, string decryptionPassword)
 		{
-			Assert.Equal(hash, PasswordHelpers.GetSha512(text));
+			Assert.False(PasswordHelpers.Decrypt(PasswordHelpers.Encrypt(text, encryptionPassword, out string keyHash), decryptionPassword, keyHash, out string result));
+			Assert.NotEqual(text, result);
+		}
+
+		[Theory]
+		[InlineData("")]
+		[InlineData("qwert test ąć@$%")]
+		public void GetPooledBytesTest(string text)
+		{
+			Assert.Equal(text, Encoding.UTF8.GetString(Encoding.UTF8.GetPooledBytes(text, out byte[] array)));
+			ArrayPool<byte>.Shared.Return(array);
 		}
 	}
 }
