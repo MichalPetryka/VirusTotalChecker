@@ -8,7 +8,7 @@ namespace VirusTotalChecker.Utilities
 	public static class PasswordHelpers
 	{
 		private static readonly UTF8Encoding Encoding = new UTF8Encoding(false);
-		private static readonly RNGCryptoServiceProvider _rng = new RNGCryptoServiceProvider();
+		private static readonly RNGCryptoServiceProvider Rng = new RNGCryptoServiceProvider();
 
 		private const int InterationsNumber = 2000;
 		private const int TagLength = 16;
@@ -17,87 +17,64 @@ namespace VirusTotalChecker.Utilities
 
 		public static string Encrypt(string plainText, string password)
 		{
-			byte[] tag = ArrayPool<byte>.Shared.Rent(TagLength);
-			byte[] saltArray = ArrayPool<byte>.Shared.Rent(SaltLength);
-			byte[] nonceArray = ArrayPool<byte>.Shared.Rent(NonceLength);
-
-			ArraySegment<byte> nonce = new ArraySegment<byte>(nonceArray, 0, NonceLength);
-			ArraySegment<byte> salt = new ArraySegment<byte>(saltArray, 0, SaltLength);
-
-			_rng.GetBytes(nonce);
-			_rng.GetBytes(salt);
-			string b64Output;
-
-			byte[] key = DeriveEncryptionKey(password, salt, InterationsNumber, 32);
+			byte[] salt = new byte[SaltLength];
+			Rng.GetBytes(salt);
+			byte[] key = DeriveEncryptionKey(password, salt, InterationsNumber, SaltLength);
 
 			using (AesGcm aes = new AesGcm(key))
 			{
-				ArraySegment<byte> plaintext = Encoding.GetPooledBytes(plainText, out byte[] array);
-				byte[] ciphertextArray = ArrayPool<byte>.Shared.Rent(plaintext.Count);
-				ArraySegment<byte> ciphertext = new ArraySegment<byte>(ciphertextArray, 0, plaintext.Count);
+				ReadOnlySpan<byte> plaintext = Encoding.GetPooledBytes(plainText, out byte[] array);
+				Span<byte> nonce = ArrayPool<byte>.Shared.RentSegment(NonceLength, out byte[] nonceArray);
+				Span<byte> ciphertext = ArrayPool<byte>.Shared.RentSegment(plaintext.Length, out byte[] ciphertextArray);
+				Span<byte> tag = ArrayPool<byte>.Shared.RentSegment(TagLength, out byte[] tagArray);
+
+				Rng.GetBytes(nonce);
 				aes.Encrypt(nonce, plaintext, ciphertext, tag);
 
 				ArrayPool<byte>.Shared.Return(array);
 
-				byte[] output = ArrayPool<byte>.Shared.Rent(TagLength + NonceLength + SaltLength + ciphertext.Count);
-				Array.Copy(tag, 0, output, 0, TagLength);
-				Array.Copy(nonceArray, 0, output, TagLength, NonceLength);
-				Array.Copy(saltArray, 0, output, NonceLength + TagLength, SaltLength);
-				Array.Copy(ciphertext.Array!, 0, output, NonceLength + TagLength + SaltLength, ciphertext.Count);
+				Span<byte> output = ArrayPool<byte>.Shared.RentSegment(TagLength + NonceLength + SaltLength + ciphertext.Length, out byte[] outputArray);
+				nonce.CopyTo(output.Slice(TagLength, NonceLength));
+				ciphertext.CopyTo(output.Slice(NonceLength + TagLength + SaltLength, ciphertext.Length));
+				tag.CopyTo(output.Slice(0, TagLength));
+				salt.CopyTo(output.Slice(NonceLength + TagLength, SaltLength));
 
-				b64Output = Convert.ToBase64String(new ArraySegment<byte>(output, 0, TagLength + NonceLength + SaltLength + ciphertext.Count));
-
-				ArrayPool<byte>.Shared.Return(output);
+				ArrayPool<byte>.Shared.Return(nonceArray);
 				ArrayPool<byte>.Shared.Return(ciphertextArray);
+				ArrayPool<byte>.Shared.Return(tagArray);
+
+				string b64Output = Convert.ToBase64String(output);
+				ArrayPool<byte>.Shared.Return(outputArray);
+				return b64Output;
 			}
-
-			ArrayPool<byte>.Shared.Return(tag);
-			ArrayPool<byte>.Shared.Return(saltArray);
-			ArrayPool<byte>.Shared.Return(nonceArray);
-			ArrayPool<byte>.Shared.Return(key);
-
-			return b64Output;
 		}
 
 		public static string Decrypt(string ciphertext, string password)
 		{
-			byte[] buffer = Convert.FromBase64String(ciphertext);
+			Span<byte> buffer = ArrayPool<byte>.Shared.RentSegment(ciphertext.Length, out byte[] baseArray);
+			buffer = Convert.TryFromBase64String(ciphertext, buffer, out int written) ? buffer.Slice(0, written) : throw new Exception();
 
-			ArraySegment<byte> tag = new ArraySegment<byte>(buffer, 0, TagLength);
-			ArraySegment<byte> nonce = new ArraySegment<byte>(buffer, TagLength, NonceLength);
-			ArraySegment<byte> salt = new ArraySegment<byte>(buffer, NonceLength + TagLength, SaltLength);
-			ArraySegment<byte> data = new ArraySegment<byte>(buffer, NonceLength + TagLength + SaltLength, buffer.Length - TagLength - NonceLength - SaltLength);
-			byte[] plainArray = ArrayPool<byte>.Shared.Rent(data.Count);
-			ArraySegment<byte> plainData = new ArraySegment<byte>(plainArray, 0, data.Count);
+			ReadOnlySpan<byte> nonce = buffer.Slice(TagLength, NonceLength);
+			ReadOnlySpan<byte> data = buffer.Slice(NonceLength + TagLength + SaltLength, buffer.Length - TagLength - NonceLength - SaltLength);
+			ReadOnlySpan<byte> tag = buffer.Slice(0, TagLength);
 
-			byte[] key = DeriveEncryptionKey(password, salt.ToArray(), InterationsNumber, 32);
+			byte[] salt = buffer.Slice(NonceLength + TagLength, SaltLength).ToArray();
+			byte[] key = DeriveEncryptionKey(password, salt, InterationsNumber, SaltLength);
 
+			Span<byte> plainData = ArrayPool<byte>.Shared.RentSegment(data.Length, out byte[] plainArray);
 			using (AesGcm aes = new AesGcm(key))
-			{
 				aes.Decrypt(nonce, data, tag, plainData);
-			}
 
+			ArrayPool<byte>.Shared.Return(baseArray);
 			string plainText = Encoding.GetString(plainData);
-
 			ArrayPool<byte>.Shared.Return(plainArray);
 			return plainText;
 		}
 
-		private static byte[] DeriveEncryptionKey(string password, ArraySegment<byte> salt, int iterations, int outputBytes)
+		private static byte[] DeriveEncryptionKey(string password, byte[] salt, int iterations, int outputBytes)
 		{
-			using Rfc2898DeriveBytes pbkdf2 = new Rfc2898DeriveBytes(password, salt.ToArray(), iterations, HashAlgorithmName.SHA512);
-			return pbkdf2.GetBytes(outputBytes);
-		}
-
-		internal static byte[] GetSha256Bytes(string text)
-		{
-			using (SHA256 sha = SHA256.Create())
-			{
-				ArraySegment<byte> buffer = Encoding.GetPooledBytes(text, out byte[] array);
-				byte[] result = sha.ComputeHash(buffer.Array!, buffer.Offset, buffer.Count);
-				ArrayPool<byte>.Shared.Return(array);
-				return result;
-			}
+			using (Rfc2898DeriveBytes pbkdf2 = new Rfc2898DeriveBytes(password, salt, iterations, HashAlgorithmName.SHA512))
+				return pbkdf2.GetBytes(outputBytes);
 		}
 
 		public static string GetSha512(string text)

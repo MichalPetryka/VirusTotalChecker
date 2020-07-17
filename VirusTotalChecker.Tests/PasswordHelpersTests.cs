@@ -8,17 +8,10 @@ namespace VirusTotalChecker.Tests
 		[Theory]
 		[InlineData("", "qwert test ąć@$%")]
 		[InlineData("qwert test ąć@$%", "qwert test ąć@$%")]
+		[InlineData("qwert test ąć@$%", "")]
 		public void EncryptionTest(string text, string key)
 		{
 			Assert.Equal(text, PasswordHelpers.Decrypt(PasswordHelpers.Encrypt(text, key), key));
-		}
-
-		[Theory]
-		[InlineData("", "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855")]
-		[InlineData("qwert test ąć@$%", "1E39C6CBCB4FEE56D0DFA60FB934A3724DAB99207AB841AED38935ADC33ECA8B")]
-		public void Sha256Test(string text, string hash)
-		{
-			Assert.Equal(hash, PasswordHelpers.GetSha256Bytes(text).ToHexString());
 		}
 
 		[Theory]
