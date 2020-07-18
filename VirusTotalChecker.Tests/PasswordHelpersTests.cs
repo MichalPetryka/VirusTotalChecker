@@ -1,32 +1,82 @@
-﻿using VirusTotalChecker.Utilities;
+﻿using System.Buffers;
+using System.Text;
+using VirusTotalChecker.Utilities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace VirusTotalChecker.Tests
 {
 	public class PasswordHelpersTests
 	{
+		private readonly ITestOutputHelper _output;
+		public PasswordHelpersTests(ITestOutputHelper output) => _output = output;
+
+		[Theory]
+		[InlineData(null, false)]
+		[InlineData("", false)]
+		[InlineData("qwert testąć7@$%", false)]
+		[InlineData("qwerttestąć@$%", false)]
+		[InlineData("777777@$%", false)]
+		[InlineData("qwerttestąć", false)]
+		[InlineData("qwertte\0stąć5@$%", false)]
+		[InlineData("qwerttestąć5@$%", true)]
+		public void PasswordCheckTest(string password, bool valid)
+		{
+			Assert.Equal(valid, PasswordHelpers.IsValid(password, out string message));
+			if (valid)
+				Assert.Null(message);
+			else
+			{
+				Assert.NotNull(message);
+				Assert.NotEqual("", message);
+				_output.WriteLine(message);
+			}
+		}
+
 		[Theory]
 		[InlineData("", "qwert test ąć@$%")]
 		[InlineData("qwert test ąć@$%", "qwert test ąć@$%")]
-		public void EncryptionTest(string text, string key)
+		[InlineData("qwert te\0st ąć@$%", "qwert test ąć\0@$%")]
+		[InlineData("qwert test ąć@$%", "")]
+		public void EncryptionTest(string text, string password)
 		{
-			Assert.Equal(text, PasswordHelpers.Decrypt(PasswordHelpers.Encrypt(text, key), key));
+			string encrypt = PasswordHelpers.Encrypt(text, password);
+			_output.WriteLine(text);
+			_output.WriteLine(password);
+			_output.WriteLine(encrypt);
+			Assert.NotEqual(string.Empty, encrypt);
+			Assert.True(PasswordHelpers.Decrypt(encrypt, password, out string result));
+			Assert.Equal(text, result);
 		}
 
 		[Theory]
-		[InlineData("", "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855")]
-		[InlineData("qwert test ąć@$%", "1E39C6CBCB4FEE56D0DFA60FB934A3724DAB99207AB841AED38935ADC33ECA8B")]
-		public void Sha256Test(string text, string hash)
+		[InlineData("", "qwert test ąć@$%", "yc+u/QtUzdG/BJNIKIKChCSq2uCKzWo+BIvh/eTVv+s2b4BgniqrgnWwOztVuDA6HK8R59NxoWsCcevTH2S5FCGqfXB8aDI2GLcZ+BGAEES4fKCfBFFGjKd/yw/vJsvYocKM9Y8URrddOHXDhHu9G9Df//+uB77Ou7xLyA==")]
+		[InlineData("qwert test ąć@$%", "qwert test ąć@$%", "IdE5uMMnX+9wVyABmJem5oJi0NY7SXwKgSda673FIHl7Ty89KTd1vCdOEg/vOssqURetbHROYxw9ceclohKd6ymyqNRca8cZZ0zLIvVrW9zV4ebPeI1T5L1IfsKtvR02ZM5HBbsMyJ+qu2/2S5PNccrD1QtFck/bi/xaKTViE82WLkuhV9vePZwZV/PuFQ==")]
+		[InlineData("qwert test ąć@$%", "", "TzEo9TvamfAu1A/p818IFaxabhosNXJUkbKIBN0JDEmay1K/yBvrkdpFv3WJI2OfYlq3rBrAiwl16MKIxWWuVbL+UaAGsZeKFCLzZPV8irJnf+xQyh9mMOqyyYNy+TEUl4DBAcj1DzFJ43VlPq+dELHQHEmDDMK63O64rwlq045oGJOzAO/6qC4STlV18A==")]
+		public void BinaryCompatibilityTest(string text, string password, string encrypted)
 		{
-			Assert.Equal(hash, PasswordHelpers.GetSha256Bytes(text).ToHexString());
+			Assert.True(PasswordHelpers.Decrypt(encrypted, password, out string result));
+			Assert.Equal(text, result);
 		}
 
 		[Theory]
-		[InlineData("", "CF83E1357EEFB8BDF1542850D66D8007D620E4050B5715DC83F4A921D36CE9CE47D0D13C5D85F2B0FF8318D2877EEC2F63B931BD47417A81A538327AF927DA3E")]
-		[InlineData("qwert test ąć@$%", "D03BAB1FBAC0CCEDEA1CE5DA13BF9428D02D1F24621FD5F32C1174C8E21DD6E7E688D2589E3AB426D7C65F466C0633D6535A2B75F9F019BC066ADB00F9143CFA")]
-		public void Sha512Test(string text, string hash)
+		[InlineData("", "qwert test ąć@$%", "fgdgfdfg")]
+		[InlineData("qwert test ąć@$%", "qwert test ąć@$%", "")]
+		[InlineData("qwert test ąć@$%", "qwert test ąć@$%", "QWERT test ąć@$%")]
+		[InlineData("qwert test ąć@$%", "", "gfdsdfh")]
+		public void InvalidPasswordTest(string text, string encryptionPassword, string decryptionPassword)
 		{
-			Assert.Equal(hash, PasswordHelpers.GetSha512(text));
+			Assert.False(PasswordHelpers.Decrypt(PasswordHelpers.Encrypt(text, encryptionPassword), decryptionPassword, out string result));
+			Assert.NotEqual(text, result);
+		}
+
+		[Theory]
+		[InlineData("")]
+		[InlineData("qwert test ąć@$%")]
+		public void GetPooledBytesTest(string text)
+		{
+			Assert.Equal(text, Encoding.UTF8.GetString(Encoding.UTF8.GetPooledBytes(text, out byte[] array)));
+			ArrayPool<byte>.Shared.Return(array);
 		}
 	}
 }
