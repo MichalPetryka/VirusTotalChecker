@@ -27,7 +27,7 @@ namespace VirusTotalChecker.Console
 					}
 				case "lockinput":
 					{
-						string line = ConsoleUtil.ReadLineLock();
+						string line = ConsoleUtil.ReadLineLock("Input your command and press enter to unlock output:");
 						if (string.IsNullOrWhiteSpace(line))
 						{
 							ConsoleUtil.WriteLine("Cannot execute an empty command!", ConsoleColor.Yellow);

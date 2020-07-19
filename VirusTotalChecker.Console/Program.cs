@@ -13,47 +13,19 @@ namespace VirusTotalChecker.Console
 	internal static class Program
 	{
 		private static readonly List<FileSystemWatcher> Watchers = new List<FileSystemWatcher>();
+
 		public static readonly List<IExitHandler> ExitHandlers = new List<IExitHandler>();
-		private static DataProcessor _processor;
+		public static readonly string DataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\VirusTotalChecker";
 		public static volatile bool Exitting;
+
+		private static DataProcessor _processor;
 		private static Stream _logStream;
 
-		private static void Main(string[] args)
+		private static void Main()
 		{
-			bool logFile = true;
-			if (args.Length > 2)
-				logFile = bool.Parse(args[2]);
-			LogCompressionType compressionType = LogCompressionType.Gzip;
-			if (args.Length > 3)
-				compressionType = Enum.Parse<LogCompressionType>(args[2], true);
-			if (logFile)
-				try
-				{
-					if (!Directory.Exists("logs"))
-						Directory.CreateDirectory("logs");
-					static FileStream GetLogFileStream(string extension)
-						// ReSharper disable once HeapView.BoxingAllocation
-						=> new FileStream($"logs/{DateTime.Now:HH-mm-ss_dd-MM-yyyy}.{extension}", FileMode.CreateNew, FileAccess.Write, FileShare.ReadWrite);
-					_logStream = compressionType switch
-					{
-						LogCompressionType.None => GetLogFileStream("txt"),
-						LogCompressionType.Gzip => new GZipStream(GetLogFileStream("txt.gz"), CompressionLevel.Optimal),
-						LogCompressionType.Brotli => new BrotliStream(GetLogFileStream("txt.br"), CompressionLevel.Optimal),
-						_ => throw new ArgumentOutOfRangeException()
-					};
-					ConsoleUtil.LogStream = new StreamWriter(_logStream);
-				}
-				catch (Exception ex)
-				{
-					ConsoleUtil.WriteLine($"Failed to create a log file! Error: {ExceptionFilter.GetErrorMessage(ex)}");
-				}
-
-			string apikey = args.Length > 0 ? args[0] : ConsoleUtil.ReadLineLock("Input your api key:");
-			int apiVersion = 3;
-			if (args.Length > 1)
-				apiVersion = int.Parse(args[1]);
-			_processor = new DataProcessor(new VirusTotalClient(apikey, apiVersion, HashType.Sha256, true, ConsoleUtil.LogHandler), 60000);
-			const string configPath = "config.json";
+			if (!Directory.Exists(DataPath))
+				Directory.CreateDirectory(DataPath);
+			string configPath = DataPath + @"\config.json";
 			if (!File.Exists(configPath))
 				using (FileStream fs = new FileStream(configPath, FileMode.CreateNew, FileAccess.Write, FileShare.Read))
 					using (StreamWriter sw = new StreamWriter(fs))
@@ -63,8 +35,56 @@ namespace VirusTotalChecker.Console
 			using (FileStream fs = new FileStream(configPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
 				using (StreamReader sr = new StreamReader(fs))
 					config = JsonConvert.DeserializeObject<VirusTotalConfig>(sr.ReadToEnd());
-			CheckInotify(config.MonitoredDirectories.Count);
 
+			ConsoleUtil.LogTime = config.LogTime;
+			if (config.LogFile)
+				try
+				{
+					string logPath = DataPath + @"\logs";
+					if (!Directory.Exists(logPath))
+						Directory.CreateDirectory(logPath);
+					static FileStream GetLogFileStream(string logPath, string extension)
+						// ReSharper disable once HeapView.BoxingAllocation
+						=> new FileStream($"{logPath}\\{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.{extension}", FileMode.CreateNew, FileAccess.Write, FileShare.ReadWrite);
+					_logStream = config.LogCompression switch
+					{
+						LogCompressionType.None => GetLogFileStream(logPath, "txt"),
+						LogCompressionType.Gzip => new GZipStream(GetLogFileStream(logPath, "txt.gz"), CompressionLevel.Optimal),
+						LogCompressionType.Brotli => new BrotliStream(GetLogFileStream(logPath, "txt.br"), CompressionLevel.Optimal),
+						_ => throw new ArgumentOutOfRangeException()
+					};
+					ConsoleUtil.LogStream = new StreamWriter(_logStream);
+				}
+				catch (Exception ex)
+				{
+					ConsoleUtil.WriteLine($"Failed to create a log file! Error: {ExceptionFilter.GetErrorMessage(ex)}");
+				}
+			MessageBox.Enabled = config.ShowDialogs;
+
+			string apiKey;
+			if (string.IsNullOrWhiteSpace(config.EncryptedApiKey))
+			{
+				apiKey = ConsoleUtil.ReadLineLock("Input your api key:");
+				while (string.IsNullOrWhiteSpace(apiKey))
+					apiKey = ConsoleUtil.ReadLineLock("Invalid api key, please try again:");
+				string password = ConsoleUtil.ReadLineLock("Input your password:");
+				while (!PasswordHelpers.IsValid(password, out string message))
+					password = ConsoleUtil.ReadLineLock($"Invalid password: {message}, please try again:");
+				config.EncryptedApiKey = PasswordHelpers.Encrypt(apiKey, password);
+				using (FileStream fs = new FileStream(configPath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read))
+					using (StreamWriter sw = new StreamWriter(fs))
+						sw.Write(JsonConvert.SerializeObject(config, Formatting.Indented));
+			}
+			else
+			{
+				string password = ConsoleUtil.ReadLineLock("Input your password:");
+				while (!PasswordHelpers.Decrypt(config.EncryptedApiKey, password, out apiKey))
+					password = ConsoleUtil.ReadLineLock("Invalid password, please try again:");
+			}
+
+			_processor = new DataProcessor(new VirusTotalClient(apiKey, config.ApiVersion, HashType.Sha256, true, ConsoleUtil.LogHandler), 60000);
+
+			CheckInotify(config.MonitoredDirectories.Count);
 			foreach (MonitoredDirectory directory in config.MonitoredDirectories)
 			{
 				FileSystemWatcher watcher = new FileSystemWatcher(directory.Path);

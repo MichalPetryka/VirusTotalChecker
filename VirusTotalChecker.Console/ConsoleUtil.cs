@@ -11,13 +11,14 @@ namespace VirusTotalChecker.Console
 		private static readonly bool NoColor = Environment.GetEnvironmentVariable("NO_COLOR") != null;
 		public static readonly ILogHandler LogHandler = new ConsoleLogHandler();
 		public static StreamWriter LogStream;
+		public static bool LogTime;
 
 		public static string ReadLine()
 		{
 			return SystemConsole.ReadLine();
 		}
 
-		public static string ReadLineLock(string message = "Input your command and press enter to unlock output:")
+		public static string ReadLineLock(string message)
 		{
 			lock (WriteLock)
 			{
@@ -41,6 +42,9 @@ namespace VirusTotalChecker.Console
 
 		private static void WriteLineNoLock(string message, ConsoleColor? color)
 		{
+			if (LogTime)
+				// ReSharper disable once HeapView.BoxingAllocation
+				message = $"[{DateTime.Now}] {message}";
 			try
 			{
 				if (color != null && !NoColor)

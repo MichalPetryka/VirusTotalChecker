@@ -1,6 +1,6 @@
 ﻿namespace VirusTotalChecker.Console
 {
-	internal enum LogCompressionType
+	public enum LogCompressionType
 	{
 		None,
 		Gzip,
