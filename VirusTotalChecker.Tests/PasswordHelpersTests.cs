@@ -19,6 +19,8 @@ namespace VirusTotalChecker.Tests
 		[InlineData("777777@$%", false)]
 		[InlineData("qwerttestąć", false)]
 		[InlineData("qwertte\0stąć5@$%", false)]
+		[InlineData("qwertte\rstąć5@$%", false)]
+		[InlineData("qwertte\nstąć5@$%", false)]
 		[InlineData("qwerttestąć5@$%", true)]
 		public void PasswordCheckTest(string password, bool valid)
 		{

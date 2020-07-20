@@ -12,6 +12,8 @@ namespace VirusTotalChecker.Console
 		private const string SdlDll = "SDL2";
 
 		public static bool Enabled = true;
+		public static bool ForceSdl = false;
+		private static bool _sdlLoaded;
 
 		[DllImport(WindowsDll, EntryPoint = "MessageBoxW", CharSet = CharSet.Unicode, SetLastError = true)]
 		private static extern int MessageBoxWindows(IntPtr hwnd, string message, string title, uint flags);
@@ -27,20 +29,17 @@ namespace VirusTotalChecker.Console
 		[DllImport(SdlDll, EntryPoint = "SDL_GetVersion")]
 		private static extern void SdlGetVersion(out SdlVersion version);
 
+		[StructLayout(LayoutKind.Sequential)]
 		private readonly struct SdlVersion
 		{
 			// those are only assigned from the dllimport, ignore the warning
-#pragma warning disable 649
 			public readonly byte Major;
 			public readonly byte Minor;
 			public readonly byte Patch;
-#pragma warning restore 649
 		}
 
-		static MessageBox()
+		private static bool LoadSdl()
 		{
-			if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-				return;
 			try
 			{
 				SdlGetVersion(out SdlVersion version);
@@ -48,6 +47,7 @@ namespace VirusTotalChecker.Console
 				ConsoleUtil.WriteLine($"Loaded SDL2 version: {version.Major}.{version.Minor}.{version.Patch}",
 					ConsoleColor.Blue);
 				// ReSharper restore HeapView.BoxingAllocation
+				_sdlLoaded = true;
 			}
 			catch (DllNotFoundException)
 			{
@@ -61,6 +61,8 @@ namespace VirusTotalChecker.Console
 				ConsoleUtil.WriteLine($"Error when loading SDL2: {ExceptionFilter.GetErrorMessage(ex)}", ConsoleColor.Red);
 				Enabled = false;
 			}
+
+			return Enabled;
 		}
 
 		public static void Show(string title, string message, Type type = Type.Info)
@@ -72,7 +74,7 @@ namespace VirusTotalChecker.Console
 			{
 				try
 				{
-					if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+					if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && !ForceSdl)
 					{
 						uint flags = type switch
 						{
@@ -86,6 +88,9 @@ namespace VirusTotalChecker.Console
 							throw new Win32Exception();
 						return;
 					}
+
+					if (!_sdlLoaded && !LoadSdl())
+						return;
 
 					uint sdlflags = type switch
 					{

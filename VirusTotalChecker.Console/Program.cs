@@ -29,12 +29,13 @@ namespace VirusTotalChecker.Console
 			if (!File.Exists(configPath))
 				using (FileStream fs = new FileStream(configPath, FileMode.CreateNew, FileAccess.Write, FileShare.Read))
 					using (StreamWriter sw = new StreamWriter(fs))
-						sw.Write(JsonConvert.SerializeObject(new VirusTotalConfig { MonitoredDirectories = new List<MonitoredDirectory>() }, Formatting.Indented));
+						sw.Write(JsonConvert.SerializeObject(new VirusTotalConfig(), Formatting.Indented));
 
-			VirusTotalConfig config;
+			string configText;
 			using (FileStream fs = new FileStream(configPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
 				using (StreamReader sr = new StreamReader(fs))
-					config = JsonConvert.DeserializeObject<VirusTotalConfig>(sr.ReadToEnd());
+					configText = sr.ReadToEnd();
+			VirusTotalConfig config = JsonConvert.DeserializeObject<VirusTotalConfig>(configText);
 
 			ConsoleUtil.LogTime = config.LogTime;
 			if (config.LogFile)
@@ -60,6 +61,7 @@ namespace VirusTotalChecker.Console
 					ConsoleUtil.WriteLine($"Failed to create a log file! Error: {ExceptionFilter.GetErrorMessage(ex)}");
 				}
 			MessageBox.Enabled = config.ShowDialogs;
+			MessageBox.ForceSdl = config.ForceSdl;
 
 			string apiKey;
 			if (string.IsNullOrWhiteSpace(config.EncryptedApiKey))
@@ -71,9 +73,6 @@ namespace VirusTotalChecker.Console
 				while (!PasswordHelpers.IsValid(password, out string message))
 					password = ConsoleUtil.ReadLineLock($"Invalid password: {message}, please try again:");
 				config.EncryptedApiKey = PasswordHelpers.Encrypt(apiKey, password);
-				using (FileStream fs = new FileStream(configPath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read))
-					using (StreamWriter sw = new StreamWriter(fs))
-						sw.Write(JsonConvert.SerializeObject(config, Formatting.Indented));
 			}
 			else
 			{
@@ -81,6 +80,12 @@ namespace VirusTotalChecker.Console
 				while (!PasswordHelpers.Decrypt(config.EncryptedApiKey, password, out apiKey))
 					password = ConsoleUtil.ReadLineLock("Invalid password, please try again:");
 			}
+
+			string newConfigText = JsonConvert.SerializeObject(config, Formatting.Indented);
+			if (configText != newConfigText)
+				using (FileStream fs = new FileStream(configPath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read))
+					using (StreamWriter sw = new StreamWriter(fs))
+						sw.Write(newConfigText);
 
 			_processor = new DataProcessor(new VirusTotalClient(apiKey, config.ApiVersion, HashType.Sha256, true, ConsoleUtil.LogHandler), 60000);
 
