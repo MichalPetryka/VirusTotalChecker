@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
+using Joveler.Compression.XZ;
 using Newtonsoft.Json;
 using VirusTotalChecker.Configuration;
 using VirusTotalChecker.Console.ExitHandlers;
@@ -38,12 +39,14 @@ namespace VirusTotalChecker.Console
 			VirusTotalConfig config = JsonConvert.DeserializeObject<VirusTotalConfig>(configText);
 
 			ConsoleUtil.LogTime = config.LogTime;
+			ExceptionFilter.ShowStacktraces = config.DebugSettings.ShowStacktraces;
 			if (config.LogFile)
 				try
 				{
 					string logPath = DataPath + @"\logs";
 					if (!Directory.Exists(logPath))
 						Directory.CreateDirectory(logPath);
+					XzHelper.LogHandler = ConsoleUtil.LogHandler;
 					static FileStream GetLogFileStream(string logPath, string extension)
 						// ReSharper disable once HeapView.BoxingAllocation
 						=> new FileStream($"{logPath}\\{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.{extension}", FileMode.CreateNew, FileAccess.Write, FileShare.ReadWrite);
@@ -51,6 +54,9 @@ namespace VirusTotalChecker.Console
 					{
 						LogCompressionType.None => GetLogFileStream(logPath, "txt"),
 						LogCompressionType.Gzip => new GZipStream(GetLogFileStream(logPath, "txt.gz"), CompressionLevel.Optimal),
+						LogCompressionType.Xz => XzHelper.GetXzStream(GetLogFileStream(logPath, "txt.xz"),
+							new XZCompressOptions {Level = LzmaCompLevel.Level9},
+							new XZThreadedCompressOptions {Threads = Environment.ProcessorCount}),
 						LogCompressionType.Brotli => new BrotliStream(GetLogFileStream(logPath, "txt.br"), CompressionLevel.Optimal),
 						_ => throw new ArgumentOutOfRangeException()
 					};
@@ -61,7 +67,7 @@ namespace VirusTotalChecker.Console
 					ConsoleUtil.WriteLine($"Failed to create a log file! Error: {ExceptionFilter.GetErrorMessage(ex)}");
 				}
 			MessageBox.Enabled = config.ShowDialogs;
-			MessageBox.ForceSdl = config.ForceSdl;
+			MessageBox.ForceSdl = config.DebugSettings.ForceSdl;
 
 			string apiKey;
 			if (string.IsNullOrWhiteSpace(config.EncryptedApiKey))
@@ -115,7 +121,7 @@ namespace VirusTotalChecker.Console
 			}
 
 			ConsoleUtil.WriteLine("Directory monitoring setup complete!", ConsoleColor.Green);
-			SetupExitHandlers();
+			SetupExitHandlers(config.DebugSettings.LogExit);
 
 			CommandProcessor commandProcessor = new CommandProcessor(_processor);
 			while (true)
@@ -139,7 +145,7 @@ namespace VirusTotalChecker.Console
 			// ReSharper disable once FunctionNeverReturns
 		}
 
-		private static void SetupExitHandlers()
+		private static void SetupExitHandlers(bool logExit)
 		{
 			try
 			{
@@ -149,7 +155,10 @@ namespace VirusTotalChecker.Console
 				ExitHandlers.Add(RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? WindowsExitHandler.Singleton : UnixExitHandler.Singleton);
 
 				foreach (IExitHandler exitHandler in ExitHandlers)
+				{
+					exitHandler.LogExit = logExit;
 					exitHandler.Setup();
+				}
 			}
 			catch (Exception ex)
 			{

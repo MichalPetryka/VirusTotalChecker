@@ -13,8 +13,6 @@ namespace VirusTotalChecker.Configuration
 		public int ApiVersion { get; set; } = 3;
 		[DefaultValue(true)]
 		public bool ShowDialogs { get; set; } = true;
-		[DefaultValue(false)]
-		public bool ForceSdl { get; set; } = false;
 		[DefaultValue(true)]
 		public bool LogTime { get; set; } = true;
 		[DefaultValue(true)]
@@ -23,5 +21,6 @@ namespace VirusTotalChecker.Configuration
 		[JsonConverter(typeof(StringEnumIgnoreCaseConverter))]
 		public LogCompressionType LogCompression { get; set; } = LogCompressionType.Gzip;
 		public List<MonitoredDirectory> MonitoredDirectories { get; set; } = new List<MonitoredDirectory>();
+		public VirusTotalDebugConfig DebugSettings { get; set; } = new VirusTotalDebugConfig();
 	}
 }

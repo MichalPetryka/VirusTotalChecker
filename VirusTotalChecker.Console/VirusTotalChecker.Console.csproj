@@ -7,6 +7,7 @@
 		<RuntimeIdentifiers>win-x64;osx-x64;linux-x64</RuntimeIdentifiers>
 	</PropertyGroup>
 	<ItemGroup>
+		<PackageReference Include="Joveler.Compression.XZ" Version="4.0.0" />
 		<PackageReference Include="Mono.Posix.NETStandard" Version="1.0.0" />
 	</ItemGroup>
 	<ItemGroup>
