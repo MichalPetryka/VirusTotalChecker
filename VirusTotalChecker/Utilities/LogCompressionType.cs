@@ -1,4 +1,4 @@
-﻿namespace VirusTotalChecker.Console
+﻿namespace VirusTotalChecker.Utilities
 {
 	public enum LogCompressionType
 	{

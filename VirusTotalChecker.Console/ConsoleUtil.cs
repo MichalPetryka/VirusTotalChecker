@@ -9,7 +9,9 @@ namespace VirusTotalChecker.Console
 	{
 		private static readonly object WriteLock = new object();
 		private static readonly bool NoColor = Environment.GetEnvironmentVariable("NO_COLOR") != null;
+
 		public static readonly ILogHandler LogHandler = new ConsoleLogHandler();
+
 		public static StreamWriter LogStream;
 		public static bool LogTime;
 
@@ -67,6 +69,7 @@ namespace VirusTotalChecker.Console
 			{
 				SystemConsole.ResetColor();
 				WriteLineNoLock("Exitting...", ConsoleColor.Blue);
+				LogStream?.Flush();
 				LogStream?.Dispose();
 				LogStream = null;
 				SystemConsole.ResetColor();

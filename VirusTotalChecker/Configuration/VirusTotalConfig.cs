@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel;
 using Newtonsoft.Json;
-using VirusTotalChecker.Console;
 using VirusTotalChecker.Utilities;
 
 namespace VirusTotalChecker.Configuration

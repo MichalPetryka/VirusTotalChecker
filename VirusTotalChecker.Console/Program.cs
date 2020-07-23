@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
+using System.Text;
 using Joveler.Compression.XZ;
 using Newtonsoft.Json;
 using VirusTotalChecker.Configuration;
@@ -13,14 +14,14 @@ namespace VirusTotalChecker.Console
 {
 	internal static class Program
 	{
+		private static readonly object ExitLock = new object();
 		private static readonly List<FileSystemWatcher> Watchers = new List<FileSystemWatcher>();
+		private static readonly List<IExitHandler> ExitHandlers = new List<IExitHandler>();
 
-		public static readonly List<IExitHandler> ExitHandlers = new List<IExitHandler>();
-		public static readonly string DataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\VirusTotalChecker";
+		private static readonly string DataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\VirusTotalChecker";
 		public static volatile bool Exitting;
 
 		private static DataProcessor _processor;
-		private static Stream _logStream;
 
 		private static void Main()
 		{
@@ -50,7 +51,7 @@ namespace VirusTotalChecker.Console
 					static FileStream GetLogFileStream(string logPath, string extension)
 						// ReSharper disable once HeapView.BoxingAllocation
 						=> new FileStream($"{logPath}\\{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.{extension}", FileMode.CreateNew, FileAccess.Write, FileShare.ReadWrite);
-					_logStream = config.LogCompression switch
+					Stream logStream = config.LogCompression switch
 					{
 						LogCompressionType.None => GetLogFileStream(logPath, "txt"),
 						LogCompressionType.Gzip => new GZipStream(GetLogFileStream(logPath, "txt.gz"), CompressionLevel.Optimal),
@@ -60,7 +61,7 @@ namespace VirusTotalChecker.Console
 						LogCompressionType.Brotli => new BrotliStream(GetLogFileStream(logPath, "txt.br"), CompressionLevel.Optimal),
 						_ => throw new ArgumentOutOfRangeException()
 					};
-					ConsoleUtil.LogStream = new StreamWriter(_logStream);
+					ConsoleUtil.LogStream = new StreamWriter(logStream, Encoding.UTF8, leaveOpen: false);
 				}
 				catch (Exception ex)
 				{
@@ -205,17 +206,20 @@ namespace VirusTotalChecker.Console
 
 		public static void Exit(int exitCode = 0)
 		{
-			if (Exitting)
-				return;
-			Exitting = true;
-			foreach (FileSystemWatcher watcher in Watchers)
-				watcher.Dispose();
-			Watchers.Clear();
+			lock (ExitLock)
+			{
+				if (Exitting)
+					return;
+				Exitting = true;
+				foreach (FileSystemWatcher watcher in Watchers)
+					watcher.Dispose();
+				Watchers.Clear();
+				ExitHandlers.Clear();
 
-			_processor.Dispose();
-			ConsoleUtil.Exit();
-			_logStream.Dispose();
-			Environment.Exit(exitCode);
+				_processor.Dispose();
+				ConsoleUtil.Exit();
+				Environment.Exit(exitCode);
+			}
 		}
 	}
 }

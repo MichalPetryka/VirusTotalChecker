@@ -1,5 +1,4 @@
 ﻿using Newtonsoft.Json;
-using VirusTotalChecker.Console;
 using VirusTotalChecker.Utilities;
 using Xunit;
 using Xunit.Abstractions;
