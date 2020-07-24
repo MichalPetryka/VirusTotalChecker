@@ -24,13 +24,18 @@ namespace VirusTotalChecker.Console
 						Program.Exit();
 						return;
 					}
+				case "datapath":
+					{
+						ConsoleUtil.WriteLine($"Data location: {Program.DataPath}");
+						return;
+					}
 				case "lockinput":
 					{
 						string line = ConsoleUtil.ReadLineLock("Input your command and press enter to unlock output:");
 						if (string.IsNullOrWhiteSpace(line))
 						{
 							ConsoleUtil.WriteLine("Cannot execute an empty command!", ConsoleColor.Yellow);
-							break;
+							return;
 						}
 						// ReSharper disable once TailRecursiveCall
 						ProcessCommand(line.Split(" ", StringSplitOptions.RemoveEmptyEntries));
@@ -40,32 +45,32 @@ namespace VirusTotalChecker.Console
 					{
 						const string eicar = "275A021BBFB6489E54D471899F7DB9D1663FC695EC2FE2A2C4538AABF651FD0F";
 						_processor.ProcessFile(eicar, eicar);
-						break;
+						return;
 					}
 				case "scan":
 					{
 						if (command.Length < 2)
 						{
 							ConsoleUtil.WriteLine("You need to specify the desired file!", ConsoleColor.Yellow);
-							break;
+							return;
 						}
 
 						string cmd = command[1];
 						if (string.IsNullOrWhiteSpace(cmd))
 						{
 							ConsoleUtil.WriteLine("Specified path is empty!", ConsoleColor.Yellow);
-							break;
+							return;
 						}
 
 						string path = Path.GetFullPath(cmd);
 						if (!File.Exists(path))
 						{
 							ConsoleUtil.WriteLine($"File {path} does not exist!", ConsoleColor.Yellow);
-							break;
+							return;
 						}
 
 						_processor.ProcessFile(path);
-						break;
+						return;
 					}
 				case "scandirectory":
 					{
@@ -73,21 +78,21 @@ namespace VirusTotalChecker.Console
 						{
 							ConsoleUtil.WriteLine("You need to specify the desired directory!",
 								ConsoleColor.Yellow);
-							break;
+							return;
 						}
 
 						string cmd = command[1];
 						if (string.IsNullOrWhiteSpace(cmd))
 						{
 							ConsoleUtil.WriteLine("Specified path is empty!", ConsoleColor.Yellow);
-							break;
+							return;
 						}
 
 						string path = Path.GetFullPath(cmd);
 						if (!Directory.Exists(path))
 						{
 							ConsoleUtil.WriteLine($"Directory {path} does not exist!", ConsoleColor.Yellow);
-							break;
+							return;
 						}
 
 						string filter = "*";
@@ -99,25 +104,25 @@ namespace VirusTotalChecker.Console
 							recursive = bool.Parse(command[3]);
 
 						_processor.ProcessDirectory(path, filter, recursive);
-						break;
+						return;
 					}
 				case "scanhash":
 					{
 						if (command.Length < 2)
 						{
 							ConsoleUtil.WriteLine("You need to specify a hash!", ConsoleColor.Yellow);
-							break;
+							return;
 						}
 
 						string hash = command[1];
 						if (string.IsNullOrWhiteSpace(hash))
 						{
 							ConsoleUtil.WriteLine("Specified hash is empty!", ConsoleColor.Yellow);
-							break;
+							return;
 						}
 
 						_processor.ProcessFile(hash, hash);
-						break;
+						return;
 					}
 				case "scanprocesses":
 					{
@@ -146,27 +151,27 @@ namespace VirusTotalChecker.Console
 							{
 								ConsoleUtil.WriteLine($"Failed to scan {process.ProcessName}. Error: {ExceptionFilter.GetErrorMessage(ex)}", ConsoleColor.Red);
 							}
-						break;
+						return;
 					}
 				case "scanprocess":
 					{
 						if (command.Length < 2)
 						{
 							ConsoleUtil.WriteLine("You need to specify the desired process id!", ConsoleColor.Yellow);
-							break;
+							return;
 						}
 
 						string id = command[1];
 						if (string.IsNullOrWhiteSpace(id))
 						{
 							ConsoleUtil.WriteLine("Specified id is empty!", ConsoleColor.Yellow);
-							break;
+							return;
 						}
 
 						if (!int.TryParse(id, out int pid))
 						{
 							ConsoleUtil.WriteLine("Specified id isn't a valid number!", ConsoleColor.Yellow);
-							break;
+							return;
 						}
 
 						bool scanSubmodules = false;
@@ -178,30 +183,30 @@ namespace VirusTotalChecker.Console
 						if (scanSubmodules)
 							foreach (ProcessModule module in process.Modules)
 								_processor.ProcessFile(module.FileName);
-						break;
+						return;
 					}
 				case "scanfilelink":
 					{
 						if (command.Length < 2)
 						{
 							ConsoleUtil.WriteLine("You need to specify the desired link!", ConsoleColor.Yellow);
-							break;
+							return;
 						}
 
 						string link = command[1];
 						if (string.IsNullOrWhiteSpace(link))
 						{
 							ConsoleUtil.WriteLine("Specified link is empty!", ConsoleColor.Yellow);
-							break;
+							return;
 						}
 
 						_processor.ProcessFileLink(link);
-						break;
+						return;
 					}
 				default:
 					{
 						ConsoleUtil.WriteLine("Unknown command!", ConsoleColor.Yellow);
-						break;
+						return;
 					}
 			}
 		}

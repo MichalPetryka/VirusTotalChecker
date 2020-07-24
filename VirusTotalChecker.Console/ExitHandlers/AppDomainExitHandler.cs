@@ -36,16 +36,17 @@ namespace VirusTotalChecker.Console.ExitHandlers
 			{
 				if (Singleton.LogExit)
 					ConsoleUtil.WriteLine("AppDomain unhandled exception detected!", ConsoleColor.Blue);
+				int exitCode = -1;
 				if (e.ExceptionObject is Exception ex)
 				{
 					ConsoleUtil.WriteLine($"Unhandled Exception: {ExceptionFilter.GetErrorMessage(ex)}", ConsoleColor.Red);
-					Program.Exit();
+					if (ex.HResult != 0)
+						exitCode = ex.HResult;
 				}
 				else
-				{
 					ConsoleUtil.WriteLine("Unhandled Exception!", ConsoleColor.Red);
-					Program.Exit();
-				}
+
+				Program.Exit(exitCode);
 			}
 		}
 	}

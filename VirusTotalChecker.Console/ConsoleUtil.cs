@@ -1,6 +1,10 @@
 ﻿using System;
 using System.IO;
+using System.IO.Compression;
+using System.Text;
+using Joveler.Compression.XZ;
 using VirusTotalChecker.Logging;
+using VirusTotalChecker.Utilities;
 using SystemConsole = System.Console;
 
 namespace VirusTotalChecker.Console
@@ -12,8 +16,60 @@ namespace VirusTotalChecker.Console
 
 		public static readonly ILogHandler LogHandler = new ConsoleLogHandler();
 
-		public static StreamWriter LogStream;
 		public static bool LogTime;
+
+		private static StreamWriter _logStream;
+
+		public static void SetLogFile(bool enabled, LogCompressionType compressionType)
+		{
+			lock (WriteLock)
+			{
+				_logStream?.Flush();
+				_logStream?.Dispose();
+				if (!enabled)
+					return;
+				try
+				{
+					string logDirectory = Program.DataPath + @"\logs";
+					if (!Directory.Exists(logDirectory))
+						Directory.CreateDirectory(logDirectory);
+					// ReSharper disable once HeapView.BoxingAllocation
+					string logPath = $@"{Program.DataPath}\logs\{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.{compressionType switch
+					{
+						LogCompressionType.None => "txt",
+						LogCompressionType.Gzip => "txt.gz",
+						LogCompressionType.Xz => "txt.xz",
+						LogCompressionType.Brotli => "txt.br",
+						// ReSharper disable once HeapView.BoxingAllocation
+						_ => throw new ArgumentOutOfRangeException(nameof(compressionType), compressionType, null)
+					}}";
+
+					static FileStream GetLogFileStream(string logPath)
+						=> new FileStream(logPath, FileMode.CreateNew, FileAccess.Write, FileShare.ReadWrite);
+
+					XzHelper.LogHandler = LogHandler;
+
+					Stream logStream = compressionType switch
+					{
+						LogCompressionType.None => GetLogFileStream(logPath),
+						LogCompressionType.Gzip => new GZipStream(GetLogFileStream(logPath), CompressionLevel.Optimal),
+						LogCompressionType.Xz => XzHelper.GetXzStream(GetLogFileStream(logPath),
+							new XZCompressOptions { Level = LzmaCompLevel.Level9 },
+							new XZThreadedCompressOptions { Threads = Environment.ProcessorCount }),
+						LogCompressionType.Brotli => new BrotliStream(GetLogFileStream(logPath), CompressionLevel.Optimal),
+						// ReSharper disable once HeapView.BoxingAllocation
+						_ => throw new ArgumentOutOfRangeException(nameof(compressionType), compressionType, null)
+					};
+
+					_logStream = new StreamWriter(logStream, Encoding.UTF8, leaveOpen: false);
+					WriteLineNoLock($"Logging output to: {logPath}", ConsoleColor.Blue);
+				}
+				catch (Exception ex)
+				{
+					WriteLineNoLock($"Failed to create a log file! Error: {ExceptionFilter.GetErrorMessage(ex)}", ConsoleColor.Red);
+				}
+			}
+		}
 
 		public static string ReadLine()
 		{
@@ -58,7 +114,7 @@ namespace VirusTotalChecker.Console
 			}
 
 			SystemConsole.WriteLine(message);
-			LogStream?.WriteLine(message);
+			_logStream?.WriteLine(message);
 
 			SystemConsole.ResetColor();
 		}
@@ -69,9 +125,9 @@ namespace VirusTotalChecker.Console
 			{
 				SystemConsole.ResetColor();
 				WriteLineNoLock("Exitting...", ConsoleColor.Blue);
-				LogStream?.Flush();
-				LogStream?.Dispose();
-				LogStream = null;
+				_logStream?.Flush();
+				_logStream?.Dispose();
+				_logStream = null;
 				SystemConsole.ResetColor();
 			}
 		}

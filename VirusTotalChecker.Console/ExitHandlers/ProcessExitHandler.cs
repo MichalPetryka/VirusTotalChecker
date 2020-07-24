@@ -12,8 +12,8 @@ namespace VirusTotalChecker.Console.ExitHandlers
 		public void Setup()
 		{
 			Process process = Process.GetCurrentProcess();
-			process.EnableRaisingEvents = true;
 			process.Exited += OnExit;
+			process.EnableRaisingEvents = true;
 		}
 
 		private static void OnExit(object sender, EventArgs e)

@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.IO.Compression;
 using System.Runtime.InteropServices;
-using System.Text;
-using Joveler.Compression.XZ;
 using Newtonsoft.Json;
 using VirusTotalChecker.Configuration;
 using VirusTotalChecker.Console.ExitHandlers;
@@ -18,7 +15,7 @@ namespace VirusTotalChecker.Console
 		private static readonly List<FileSystemWatcher> Watchers = new List<FileSystemWatcher>();
 		private static readonly List<IExitHandler> ExitHandlers = new List<IExitHandler>();
 
-		private static readonly string DataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\VirusTotalChecker";
+		public static readonly string DataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\VirusTotalChecker";
 		public static volatile bool Exitting;
 
 		private static DataProcessor _processor;
@@ -33,6 +30,7 @@ namespace VirusTotalChecker.Console
 					using (StreamWriter sw = new StreamWriter(fs))
 						sw.Write(JsonConvert.SerializeObject(new VirusTotalConfig(), Formatting.Indented));
 
+			ConsoleUtil.WriteLine($"Reading config from {configPath}", ConsoleColor.Blue);
 			string configText;
 			using (FileStream fs = new FileStream(configPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
 				using (StreamReader sr = new StreamReader(fs))
@@ -41,32 +39,7 @@ namespace VirusTotalChecker.Console
 
 			ConsoleUtil.LogTime = config.LogTime;
 			ExceptionFilter.ShowStacktraces = config.DebugSettings.ShowStacktraces;
-			if (config.LogFile)
-				try
-				{
-					string logPath = DataPath + @"\logs";
-					if (!Directory.Exists(logPath))
-						Directory.CreateDirectory(logPath);
-					XzHelper.LogHandler = ConsoleUtil.LogHandler;
-					static FileStream GetLogFileStream(string logPath, string extension)
-						// ReSharper disable once HeapView.BoxingAllocation
-						=> new FileStream($"{logPath}\\{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.{extension}", FileMode.CreateNew, FileAccess.Write, FileShare.ReadWrite);
-					Stream logStream = config.LogCompression switch
-					{
-						LogCompressionType.None => GetLogFileStream(logPath, "txt"),
-						LogCompressionType.Gzip => new GZipStream(GetLogFileStream(logPath, "txt.gz"), CompressionLevel.Optimal),
-						LogCompressionType.Xz => XzHelper.GetXzStream(GetLogFileStream(logPath, "txt.xz"),
-							new XZCompressOptions {Level = LzmaCompLevel.Level9},
-							new XZThreadedCompressOptions {Threads = Environment.ProcessorCount}),
-						LogCompressionType.Brotli => new BrotliStream(GetLogFileStream(logPath, "txt.br"), CompressionLevel.Optimal),
-						_ => throw new ArgumentOutOfRangeException()
-					};
-					ConsoleUtil.LogStream = new StreamWriter(logStream, Encoding.UTF8, leaveOpen: false);
-				}
-				catch (Exception ex)
-				{
-					ConsoleUtil.WriteLine($"Failed to create a log file! Error: {ExceptionFilter.GetErrorMessage(ex)}");
-				}
+			ConsoleUtil.SetLogFile(config.LogFile, config.LogCompression);
 			MessageBox.Enabled = config.ShowDialogs;
 			MessageBox.ForceSdl = config.DebugSettings.ForceSdl;
 
@@ -87,6 +60,7 @@ namespace VirusTotalChecker.Console
 				while (!PasswordHelpers.Decrypt(config.EncryptedApiKey, password, out apiKey))
 					password = ConsoleUtil.ReadLineLock("Invalid password, please try again:");
 			}
+			ConsoleUtil.WriteLine("API key sucessfully obtained!", ConsoleColor.Blue);
 
 			string newConfigText = JsonConvert.SerializeObject(config, Formatting.Indented);
 			if (configText != newConfigText)
@@ -218,8 +192,8 @@ namespace VirusTotalChecker.Console
 
 				_processor.Dispose();
 				ConsoleUtil.Exit();
-				Environment.Exit(exitCode);
 			}
+			Environment.Exit(exitCode);
 		}
 	}
 }

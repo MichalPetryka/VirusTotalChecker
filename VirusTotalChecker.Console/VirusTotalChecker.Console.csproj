@@ -17,6 +17,9 @@
 		<None Update="SDL2.dll" CopyToOutputDirectory="Always" />
 	</ItemGroup>
 	<ItemGroup>
+		<None Update="libSDL2.so" CopyToOutputDirectory="Always" />
+	</ItemGroup>
+	<ItemGroup>
 		<None Update="README-SDL.txt" CopyToOutputDirectory="Always" />
 	</ItemGroup>
 </Project>
