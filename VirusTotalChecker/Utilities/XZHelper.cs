@@ -38,7 +38,7 @@ namespace VirusTotalChecker.Utilities
 					XZInit.GlobalInit();
 					_loaded = true;
 				}
-				LogHandler.Log("XZ has been loaded");
+				LogHandler.Log($"XZ {XZInit.VersionString()} has been loaded");
 			}
 		}
 

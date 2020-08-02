@@ -8,7 +8,6 @@ namespace VirusTotalChecker.Utilities
 	public static class PasswordHelpers
 	{
 		private static readonly UTF8Encoding Encoding = new UTF8Encoding(false);
-		private static readonly RNGCryptoServiceProvider Rng = new RNGCryptoServiceProvider();
 
 		private const int InterationsNumber = 2000;
 		private const int TagLength = 16;
@@ -83,7 +82,7 @@ namespace VirusTotalChecker.Utilities
 		public static string Encrypt(string plainText, string password)
 		{
 			byte[] salt = new byte[SaltLength];
-			Rng.GetBytes(salt);
+			RandomNumberGenerator.Fill(salt);
 			byte[] key = DeriveEncryptionKey(password, salt, InterationsNumber, SaltLength);
 
 			byte[] keyHash;
@@ -97,7 +96,7 @@ namespace VirusTotalChecker.Utilities
 				Span<byte> ciphertext = ArrayPool<byte>.Shared.RentSegment(plaintext.Length, out byte[] ciphertextArray);
 				Span<byte> tag = ArrayPool<byte>.Shared.RentSegment(TagLength, out byte[] tagArray);
 
-				Rng.GetBytes(nonce);
+				RandomNumberGenerator.Fill(nonce);
 				aes.Encrypt(nonce, plaintext, ciphertext, tag);
 
 				ArrayPool<byte>.Shared.Return(array);
