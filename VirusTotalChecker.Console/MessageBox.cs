@@ -14,6 +14,7 @@ namespace VirusTotalChecker.Console
 		public static bool Enabled = true;
 		public static bool ForceSdl = false;
 		private static bool _sdlLoaded;
+		private static readonly object SdlLoadLock = new object();
 
 		[DllImport(WindowsDll, EntryPoint = "MessageBoxW", CharSet = CharSet.Unicode, SetLastError = true)]
 		private static extern int MessageBoxWindows(IntPtr hwnd, string message, string title, uint flags);
@@ -32,37 +33,42 @@ namespace VirusTotalChecker.Console
 		[StructLayout(LayoutKind.Sequential)]
 		private readonly struct SdlVersion
 		{
-			// those are only assigned from the dllimport, ignore the warning
 			public readonly byte Major;
 			public readonly byte Minor;
 			public readonly byte Patch;
 		}
 
-		private static bool LoadSdl()
+		private static bool CheckSdl()
 		{
-			try
+			lock (SdlLoadLock)
 			{
-				SdlGetVersion(out SdlVersion version);
-				// ReSharper disable HeapView.BoxingAllocation
-				ConsoleUtil.WriteLine($"Loaded SDL2 version: {version.Major}.{version.Minor}.{version.Patch}",
-					ConsoleColor.Blue);
-				// ReSharper restore HeapView.BoxingAllocation
-				_sdlLoaded = true;
-			}
-			catch (DllNotFoundException)
-			{
-				ConsoleUtil.WriteLine(
-					"On platforms other than Windows SDL2 is required for Message Boxes, install it with your distributions package manager",
-					ConsoleColor.Yellow);
-				Enabled = false;
-			}
-			catch (Exception ex)
-			{
-				ConsoleUtil.WriteLine($"Error when loading SDL2: {ExceptionFilter.GetErrorMessage(ex)}", ConsoleColor.Red);
-				Enabled = false;
-			}
+				if (_sdlLoaded)
+					return Enabled;
 
-			return Enabled;
+				try
+				{
+					SdlGetVersion(out SdlVersion version);
+					// ReSharper disable HeapView.BoxingAllocation
+					ConsoleUtil.WriteLine($"Loaded SDL2 version: {version.Major}.{version.Minor}.{version.Patch}",
+						ConsoleColor.Blue);
+					// ReSharper restore HeapView.BoxingAllocation
+					_sdlLoaded = true;
+				}
+				catch (DllNotFoundException)
+				{
+					ConsoleUtil.WriteLine(
+						"On platforms other than Windows SDL2 is required for Message Boxes, install it with your systems package manager",
+						ConsoleColor.Yellow);
+					Enabled = false;
+				}
+				catch (Exception ex)
+				{
+					ConsoleUtil.WriteLine($"Error when loading SDL2: {ex.GetErrorMessage()}", ConsoleColor.Red);
+					Enabled = false;
+				}
+
+				return Enabled;
+			}
 		}
 
 		public static void Show(string title, string message, Type type = Type.Info)
@@ -89,7 +95,7 @@ namespace VirusTotalChecker.Console
 						return;
 					}
 
-					if (!_sdlLoaded && !LoadSdl())
+					if (!CheckSdl())
 						return;
 
 					uint sdlflags = type switch
@@ -105,7 +111,7 @@ namespace VirusTotalChecker.Console
 				}
 				catch (Exception ex)
 				{
-					ConsoleUtil.WriteLine($"MessageBox creation failed: {ExceptionFilter.GetErrorMessage(ex)}",
+					ConsoleUtil.WriteLine($"MessageBox creation failed: {ex.GetErrorMessage()}",
 						ConsoleColor.Red);
 				}
 			}

@@ -34,7 +34,7 @@ namespace VirusTotalChecker.Utilities
 				}
 				catch (Exception ex)
 				{
-					LogHandler.Log(ExceptionFilter.GetErrorMessage(ex), LogType.Error);
+					LogHandler.Log(ex.GetErrorMessage(), LogType.Error);
 					XZInit.GlobalInit();
 					_loaded = true;
 				}

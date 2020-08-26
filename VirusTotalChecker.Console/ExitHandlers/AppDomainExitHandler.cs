@@ -39,7 +39,7 @@ namespace VirusTotalChecker.Console.ExitHandlers
 				int exitCode = -1;
 				if (e.ExceptionObject is Exception ex)
 				{
-					ConsoleUtil.WriteLine($"Unhandled Exception: {ExceptionFilter.GetErrorMessage(ex)}", ConsoleColor.Red);
+					ConsoleUtil.WriteLine($"Unhandled Exception: {ex.GetErrorMessage()}", ConsoleColor.Red);
 					if (ex.HResult != 0)
 						exitCode = ex.HResult;
 				}

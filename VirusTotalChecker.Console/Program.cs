@@ -113,7 +113,7 @@ namespace VirusTotalChecker.Console
 				}
 				catch (Exception ex)
 				{
-					ConsoleUtil.WriteLine($"Error {ExceptionFilter.GetErrorMessage(ex)} when executing {line}", ConsoleColor.Red);
+					ConsoleUtil.WriteLine($"Error {ex.GetErrorMessage()} when executing {line}", ConsoleColor.Red);
 				}
 			}
 			// exit command closes the program
@@ -137,7 +137,7 @@ namespace VirusTotalChecker.Console
 			}
 			catch (Exception ex)
 			{
-				ConsoleUtil.WriteLine($"Failed to setup exit handlers! Error: {ExceptionFilter.GetErrorMessage(ex)}", ConsoleColor.Red);
+				ConsoleUtil.WriteLine($"Failed to setup exit handlers! Error: {ex.GetErrorMessage()}", ConsoleColor.Red);
 			}
 		}
 
@@ -168,7 +168,7 @@ namespace VirusTotalChecker.Console
 			}
 			catch (Exception ex)
 			{
-				ConsoleUtil.WriteLine($"Error while checking inotify limit: {ExceptionFilter.GetErrorMessage(ex)}");
+				ConsoleUtil.WriteLine($"Error while checking inotify limit: {ex.GetErrorMessage()}");
 			}
 		}
 

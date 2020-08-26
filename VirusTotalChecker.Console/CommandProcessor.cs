@@ -149,7 +149,7 @@ namespace VirusTotalChecker.Console
 							}
 							catch (Exception ex)
 							{
-								ConsoleUtil.WriteLine($"Failed to scan {process.ProcessName}. Error: {ExceptionFilter.GetErrorMessage(ex)}", ConsoleColor.Red);
+								ConsoleUtil.WriteLine($"Failed to scan {process.ProcessName}. Error: {ex.GetErrorMessage()}", ConsoleColor.Red);
 							}
 						return;
 					}

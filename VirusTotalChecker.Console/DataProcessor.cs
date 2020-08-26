@@ -57,8 +57,8 @@ namespace VirusTotalChecker.Console
 			{
 				ConsoleUtil.WriteLine(
 					ex.InnerException == null
-						? ExceptionFilter.GetErrorMessage(ex)
-						: $"{ExceptionFilter.GetErrorMessage(ex)}. Inner error: {ExceptionFilter.GetErrorMessage(ex.InnerException)}",
+						? ex.GetErrorMessage()
+						: $"{ex.GetErrorMessage()}. Inner error: {ex.InnerException.GetErrorMessage()}",
 					ConsoleColor.Red);
 			}
 		}
@@ -84,8 +84,8 @@ namespace VirusTotalChecker.Console
 			{
 				ConsoleUtil.WriteLine(
 					ex.InnerException == null
-						? ExceptionFilter.GetErrorMessage(ex)
-						: $"{ExceptionFilter.GetErrorMessage(ex)}. Inner error: {ExceptionFilter.GetErrorMessage(ex.InnerException)}",
+						? ex.GetErrorMessage()
+						: $"{ex.GetErrorMessage()}. Inner error: {ex.InnerException.GetErrorMessage()}",
 					ConsoleColor.Red);
 			}
 		}

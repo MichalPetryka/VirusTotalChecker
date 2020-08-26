@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 
@@ -6,10 +7,13 @@ namespace VirusTotalChecker.Api
 {
 	internal abstract class VirusTotalApi : IDisposable
 	{
-		protected readonly HttpClient Client = new HttpClient();
+		protected readonly HttpClient Client = new HttpClient(new SocketsHttpHandler
+		{
+			AutomaticDecompression = DecompressionMethods.All
+		});
 		protected readonly string ApiKey;
 
-		public VirusTotalApi(string apiKey)
+		protected VirusTotalApi(string apiKey)
 		{
 			ApiKey = apiKey;
 		}

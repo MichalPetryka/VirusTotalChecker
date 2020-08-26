@@ -66,7 +66,7 @@ namespace VirusTotalChecker.Console
 				}
 				catch (Exception ex)
 				{
-					WriteLineNoLock($"Failed to create a log file! Error: {ExceptionFilter.GetErrorMessage(ex)}", ConsoleColor.Red);
+					WriteLineNoLock($"Failed to create a log file! Error: {ex.GetErrorMessage()}", ConsoleColor.Red);
 				}
 			}
 		}
